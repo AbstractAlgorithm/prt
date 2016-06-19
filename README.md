@@ -11,6 +11,7 @@ precomputed radiance transport
     - render irradiance cubemap from a point
     - debug view
     - convert cubemap to SH
+    - irradiance volumes
 - prt
     - generate prt for a point
     - debug view
