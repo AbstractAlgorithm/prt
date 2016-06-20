@@ -22,6 +22,7 @@ struct
 
 void main()
 {
+    // init
     // TwInit(TW_OPENGL, NULL);
     glClearColor(54.0f / 255.0f, 122.0f / 255.0f, 165.0f / 255.0f, 1.0f);
     RECT hrect;
@@ -32,17 +33,15 @@ void main()
     camera.r = 1.0f;
     camera.p = glm::perspective(45.0f, (float)hrect.right / (float)hrect.bottom, 0.001f, 10.0f);
     glm::mat4 m;
-    GLuint heightmap;
-    bool wPrev = false , wShow = false;
-
-    heightmap = aa::render::CreateTexture2D("src/images/terrain1.bmp");
     m = glm::mat4(1.0f);
     m = glm::translate(m, glm::vec3(-0.5f, 0.0f, -0.5f));
-    //m = glm::scale(m, glm::vec3(2.0f,2.0f,2.0f));
-    
+    bool wPrev = false, wShow = false;
+    GLuint heightmap = aa::render::CreateTexture2D("src/images/terrain1.bmp");
 
+    // loop
     while (!aa::window::windowShouldClose())
     {
+        // input
         aa::input::Process();
         if (aa::input::keys[aa::input::LEFT])
             camera.angle += 0.01f;
@@ -56,17 +55,20 @@ void main()
             camera.yaw += 0.01f;
         if (aa::input::keys[aa::input::DOWN])
             camera.yaw -= 0.01f;
-
-        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         if (!aa::input::keys[aa::input::W] && wPrev)
             wShow = !wShow;
-        aa::render::DrawLODTerrain(heightmap, m, camera.v(), camera.p, wShow);
         wPrev = aa::input::keys[aa::input::W];
-        //aa::render::DrawTexturedQuad(heightmap, 440, 280, 200, 200);
+
+        // drawing
+        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+        aa::render::DrawLODTerrain(heightmap, m, camera.v(), camera.p, wShow);
+        // aa::render::DrawTexturedQuad(heightmap, 440, 280, 200, 200);
         // TwDraw();
+
         aa::window::SwapBuffersBackend();
     }
 
+    // cleanup
     glDeleteTextures(1, &heightmap);
     // TwTerminate();
 }
