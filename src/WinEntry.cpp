@@ -101,7 +101,7 @@ HRESULT window::InitWindow(HINSTANCE hInstance, int nCmdShow)
     wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
     wcex.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
     wcex.lpszMenuName = nullptr;
-    wcex.lpszClassName = L"InvaderWinClass";
+    wcex.lpszClassName = L"PrtWinClass";
     wcex.hIconSm = wcex.hIcon;
     if (!RegisterClassEx(&wcex))
         return E_FAIL;
@@ -110,7 +110,7 @@ HRESULT window::InitWindow(HINSTANCE hInstance, int nCmdShow)
     window::g_hInst = hInstance;
     RECT rc = { 0, 0, 640, 480 };
     AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
-    window::g_hWnd = CreateWindow(L"InvaderWinClass", L"invader",
+    window::g_hWnd = CreateWindow(L"PrtWinClass", L"PRT",
         WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
         CW_USEDEFAULT, CW_USEDEFAULT, rc.right - rc.left, rc.bottom - rc.top, nullptr, nullptr, hInstance,
         nullptr);
@@ -134,7 +134,7 @@ void window::CleanupWindow()
         g_hWnd = NULL;
     }
 
-    if (!UnregisterClass(L"FrameWinClass", g_hInst))
+    if (!UnregisterClass(L"PrtWinClass", g_hInst))
     {
         MessageBox(NULL, L"Could Not Unregister Class.", L"SHUTDOWN ERROR", MB_OK | MB_ICONINFORMATION);
         g_hInst = NULL;
