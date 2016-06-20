@@ -25,12 +25,15 @@ struct
     GLuint heightmap;
     glm::mat4 m;
 } terrain;
+GLuint cm;
+RECT hrect;
 
-
-
-void DrawWorld(void)
+void DrawWorld(glm::mat4 v, glm::mat4 p)
 {
-    
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    aa::render::DrawLODTerrain(terrain.heightmap, terrain.m, v, p, terrain.wShow);
+    //aa::render::DrawCubemapAsLatlong(cm, 40, 280, 400, 200);
+    //aa::render::DrawTexturedQuad(terrain.heightmap, 440, 280, 200, 200);
 }
 
 void main()
@@ -38,7 +41,7 @@ void main()
     // init
     // TwInit(TW_OPENGL, NULL);
     glClearColor(54.0f / 255.0f, 122.0f / 255.0f, 165.0f / 255.0f, 1.0f);
-    RECT hrect;
+    
     GetClientRect(aa::window::g_hWnd, &hrect);
     glViewport(0, 0, hrect.right, hrect.bottom);
     camera.angle = 0.0f;
@@ -60,7 +63,9 @@ void main()
         "src/images/back.bmp",
         "src/images/front.bmp" };
 
-    GLuint cm = aa::render::CreteTextureCubemap(filenames);
+    //cm = aa::render::CreteTextureCubemap(filenames);
+    glm::ivec2 cmRes(256, 256);
+    cm = aa::render::CreateCubemapEmpty(cmRes);
 
     // loop
     while (!aa::window::windowShouldClose())
@@ -84,10 +89,10 @@ void main()
 
         // drawing
         {
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            aa::render::DrawLODTerrain(terrain.heightmap, terrain.m, camera.v(), camera.p, terrain.wShow);
-            aa::render::DrawCubemapAsLatlong(cm, 40, 280, 400, 200);
-            aa::render::DrawTexturedQuad(terrain.heightmap, 440, 280, 200, 200);
+            aa::render::RenderCubemap(cm, cmRes, glm::vec3(0.0f,0.5f, 0.0f), &DrawWorld);
+            glViewport(0, 0, hrect.right, hrect.bottom);
+            aa::render::DrawCubemapAsLatlong(cm, 0, 0, 640, 480);
+            //DrawWorld(camera.v(), camera.p);
             // TwDraw();
         }
 

@@ -1,6 +1,15 @@
 #include "Render.h"
 
 #define GLSLify(version, shader) "#version " #version "\n" #shader
+#define LFX_ERRCHK(glFn) \
+do { \
+glFn; \
+GLenum err = glGetError(); \
+const GLubyte* errmsg = gluErrorString(err); \
+if (err != GL_NO_ERROR)    \
+    printf("ERROR: 0x%x (%s)\n%s : %d\n", err, errmsg, __FILE__, __LINE__); \
+} while (0)
+
 
 HRESULT fillBMP(GLenum target, std::string name)
 {
@@ -48,8 +57,8 @@ GLuint aa::render::CreateTexture2D(char const* filename)
     glBindTexture(GL_TEXTURE_2D, tex);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     if (fillBMP(GL_TEXTURE_2D, filename) != S_OK)
         return 0;
     return tex;
@@ -551,7 +560,7 @@ struct CubemapLatlong
         glDisable(GL_DEPTH_TEST);
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
         glUniform1i(uloc_tex, 0);
         RECT hrect;
         GetClientRect(aa::window::g_hWnd, &hrect);
@@ -579,6 +588,99 @@ void aa::render::DrawCubemapAsLatlong(GLuint cubemap, unsigned x, unsigned y, un
 {
     static CubemapLatlong cll;
     cll.Draw(cubemap, x, y, width, height);
+}
+
+GLuint aa::render::CreateCubemapEmpty(glm::ivec2 res)
+{
+    GLuint tex;
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, tex);
+    for (GLuint i = 0; i < 6; i++)
+    {
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, res.x, res.y, 0, GL_BGR, GL_UNSIGNED_BYTE, 0);
+    }
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+    return tex;
+}
+
+struct CubemapFiller
+{
+    GLuint fbo, rb;
+    bool init;
+    glm::ivec2 rbres;
+    CubemapFiller()
+    {
+        // fbo
+        glGenFramebuffers(1, &fbo);
+        // rb
+        glGenRenderbuffers(1, &rb);
+        init = false;
+    }
+
+    ~CubemapFiller()
+    {
+        glDeleteFramebuffers(1, &fbo);
+        glDeleteRenderbuffers(1, &rb);
+    }
+
+    void Draw(GLuint cubemap, glm::ivec2 res, glm::vec3 position, void(*drawWorldFunc)(glm::mat4 v, glm::mat4 p))
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        if (init == false /*|| (rbres.x!=res.x || rbres.y!=res.y)*/)
+        {
+            glBindRenderbuffer(GL_RENDERBUFFER, rb);
+            glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, res.x, res.y);
+            glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rb);
+            glBindRenderbuffer(GL_RENDERBUFFER, 0);
+            rbres = res;
+            init = true;
+        }
+        // camera
+        glm::mat4 p = glm::perspective(90.0f, 1.0f, 0.01f, 10.0f);
+        glm::mat4 v;
+
+        glm::vec3 targets[6] = {
+            glm::vec3(+1, 0, 0),
+            glm::vec3(-1, 0, 0),
+            glm::vec3(0, +1, 0),
+            glm::vec3(0, -1, 0),
+            glm::vec3(0, 0, +1),
+            glm::vec3(0, 0, -1)
+        };
+        glm::vec3 ups[6] = {
+            glm::vec3(0, 1, 0),
+            glm::vec3(0, 1, 0),
+            glm::vec3(1, 0, 0),
+            glm::vec3(1, 0, 0),
+            glm::vec3(0, 1, 0),
+            glm::vec3(0, 1, 0)
+        };
+
+        // render
+        for (int i = 0; i < 6; i++)
+        {
+            // setup target face
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, cubemap, 0);
+            // setup camera
+            v = glm::lookAt(position, position - targets[i], ups[i]);
+            // draw
+            glViewport(0, 0, res.x, res.y);
+            (*drawWorldFunc)(v, p);
+        }
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        LFX_ERRCHK();
+    }
+};
+
+void aa::render::RenderCubemap(GLuint cubemap, glm::ivec2 res, glm::vec3 position, void(*drawWorldFunc)(glm::mat4 v, glm::mat4 p))
+{
+    static CubemapFiller cmf;
+    cmf.Draw(cubemap, res, position, drawWorldFunc);
 }
 
 #undef GLSLify
