@@ -3,10 +3,11 @@ precomputed radiance transport
 
 ### todo
 
-- terrain
-    - render
-    - tessellated LOD
-    - fix cracks
+- ~~terrain~~
+    - ~~render~~
+    - ~~tessellated LOD~~
+    - ~~fix cracks~~
+    - textured and nicely shaded
 - cubemap
     - render irradiance cubemap from a point
     - debug view
