@@ -2,7 +2,7 @@
 
 #define GLSLify(version, shader) "#version " #version "\n" #shader
 
-HRESULT fillBMP(std::string name)
+HRESULT fillBMP(GLenum target, std::string name)
 {
     unsigned char header[54];
     unsigned int dataPos;
@@ -34,7 +34,7 @@ HRESULT fillBMP(std::string name)
     fread(data, 1, imageSize, file);
     fclose(file);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_BGR, GL_UNSIGNED_BYTE, data);
+    glTexImage2D(target, 0, GL_RGB, width, height, 0, GL_BGR, GL_UNSIGNED_BYTE, data);
 
     delete[] data;
 
@@ -50,7 +50,7 @@ GLuint aa::render::CreateTexture2D(char const* filename)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    if (fillBMP(filename) != S_OK)
+    if (fillBMP(GL_TEXTURE_2D, filename) != S_OK)
         return 0;
     return tex;
 }
@@ -422,6 +422,163 @@ void aa::render::DrawLODTerrain(GLuint heightmap, glm::mat4 m, glm::mat4 v, glm:
 {
     static TerrainLOD terrain;
     terrain.Draw(heightmap, m, v, p, wireframe);
+}
+
+GLuint aa::render::CreteTextureCubemap(const char* filenames[6])
+{
+    GLuint tex;
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, tex);
+    for (GLuint i = 0; i < 6; i++)
+    {
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+        fillBMP(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, filenames[i]);
+    }
+    return tex;
+}
+
+struct CubemapLatlong
+{
+    GLuint vao, vbo, program;
+    GLint uloc_tex, uloc_res, uloc_dim;
+
+    CubemapLatlong()
+    {
+        // init shaders
+        program = glCreateProgram();
+        {
+            GLuint vs = glCreateShader(GL_VERTEX_SHADER);
+            static const char* vs_shdr = GLSLify(330,
+                in vec2 iPos;
+                uniform vec2 uRes;
+                uniform vec4 uDim;
+                out vec2 uv;
+
+                /* Cubemap as latlong shader by:
+                Dario Manesku (https://github.com/dariomanesku) */
+                void main()
+                {
+                    vec2 sz = 2.0 * (uDim.zw / uRes);
+                    vec2 disp = 2.0 * (uDim.xy / uRes);
+                    vec2 p = iPos * 0.5 + vec2(0.5, 0.5);
+                    p *= sz;
+                    p += disp - vec2(1, 1);
+                    gl_Position = vec4(p.x, -p.y, 0.5, 1.0);
+
+                    uv = (iPos + vec2(1.0)) * 0.5;
+                }
+            );
+            glShaderSource(vs, 1, &vs_shdr, NULL);
+            glCompileShader(vs);
+            glAttachShader(program, vs);
+
+            GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
+            const char* fs_shdr = GLSLify(330,
+                in vec2 uv;
+                uniform samplerCube uTex;
+                out vec4 fragColor;
+
+                vec3 vecFromLatLong(vec2 _uv)
+                {
+                    float pi = 3.14159265;
+                    float twoPi = 2.0*pi;
+                    float phi = _uv.x * twoPi;
+                    float theta = _uv.y * pi;
+
+                    vec3 result;
+                    result.x = -sin(theta)*sin(phi);
+                    result.y = -cos(theta);
+                    result.z = -sin(theta)*cos(phi);
+
+                    return result;
+                }
+
+                void main()
+                {
+                    vec3 dir = vecFromLatLong(uv);
+                    fragColor = texture(uTex, dir);
+                }
+            );
+            glShaderSource(fs, 1, &fs_shdr, NULL);
+            glCompileShader(fs);
+            glAttachShader(program, fs);
+
+            glLinkProgram(program);
+            glDeleteShader(vs);
+            glDeleteShader(fs);
+            {
+                int infologLen = 0;
+                int charsWritten = 0;
+                GLchar *infoLog = NULL;
+                glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infologLen);
+                if (infologLen > 0)
+                {
+                    infoLog = (GLchar*)malloc(infologLen);
+                    if (infoLog == NULL)
+                        return;
+                    glGetProgramInfoLog(program, infologLen, &charsWritten, infoLog);
+                }
+                printf("%s", infoLog);
+                delete[] infoLog;
+            }
+        }
+        uloc_res = glGetUniformLocation(program, "uRes");
+        uloc_tex = glGetUniformLocation(program, "uTex");
+        uloc_dim = glGetUniformLocation(program, "uDim");
+
+        // init fs quad
+        glGenVertexArrays(1, &vao);
+        glGenBuffers(1, &vbo);
+
+        glBindVertexArray(vao);
+        GLfloat verts[12] = { -1, -1, 1, 1, -1, 1, -1, -1, 1, -1, 1, 1 };
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
+        glBindVertexArray(0);
+    }
+
+    void Draw(GLuint texture, unsigned x, unsigned y, unsigned width, unsigned height)
+    {
+        glUseProgram(program);
+
+        glDisable(GL_CULL_FACE);
+        glDisable(GL_DEPTH_TEST);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glUniform1i(uloc_tex, 0);
+        RECT hrect;
+        GetClientRect(aa::window::g_hWnd, &hrect);
+        glUniform2f(uloc_res, (float)hrect.right, (float)hrect.bottom);
+        glUniform4f(uloc_dim, (float)x, (float)y, (float)width, (float)height);
+
+        glBindVertexArray(vao);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+    }
+
+    ~CubemapLatlong()
+    {
+        glBindVertexArray(0);
+        glDeleteBuffers(1, &vbo);
+        glDeleteVertexArrays(1, &vao);
+        vbo = 0;
+        vao = 0;
+
+        glDeleteProgram(program);
+        program = 0;
+    }
+};
+
+void aa::render::DrawCubemapAsLatlong(GLuint cubemap, unsigned x, unsigned y, unsigned width, unsigned height)
+{
+    static CubemapLatlong cll;
+    cll.Draw(cubemap, x, y, width, height);
 }
 
 #undef GLSLify
