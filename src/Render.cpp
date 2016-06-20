@@ -159,9 +159,9 @@ struct TexturedQuad
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture);
         glUniform1i(uloc_tex, 0);
-        RECT hrect;
-        GetClientRect(aa::window::g_hWnd, &hrect);
-        glUniform2f(uloc_res, (float)hrect.right, (float)hrect.bottom);
+        int dims[4];
+        glGetIntegerv(GL_VIEWPORT, dims);
+        glUniform2f(uloc_res, dims[2], dims[3]);
         glUniform4f(uloc_dim, (float)x, (float)y, (float)width, (float)height);
 
         glBindVertexArray(vao);
@@ -562,9 +562,9 @@ struct CubemapLatlong
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
         glUniform1i(uloc_tex, 0);
-        RECT hrect;
-        GetClientRect(aa::window::g_hWnd, &hrect);
-        glUniform2f(uloc_res, (float)hrect.right, (float)hrect.bottom);
+        int dims[4];
+        glGetIntegerv(GL_VIEWPORT, dims);
+        glUniform2f(uloc_res, dims[2], dims[3]);
         glUniform4f(uloc_dim, (float)x, (float)y, (float)width, (float)height);
 
         glBindVertexArray(vao);
@@ -661,6 +661,8 @@ struct CubemapFiller
             glm::vec3(0, 1, 0)
         };
 
+        glViewport(0, 0, rbres.x, rbres.y);
+
         // render
         for (int i = 0; i < 6; i++)
         {
@@ -669,11 +671,9 @@ struct CubemapFiller
             // setup camera
             v = glm::lookAt(position, position - targets[i], ups[i]);
             // draw
-            glViewport(0, 0, res.x, res.y);
             (*drawWorldFunc)(v, p);
         }
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        LFX_ERRCHK();
     }
 };
 

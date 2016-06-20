@@ -108,7 +108,7 @@ HRESULT window::InitWindow(HINSTANCE hInstance, int nCmdShow)
 
     // Create window
     window::g_hInst = hInstance;
-    RECT rc = { 0, 0, 640, 480 };
+    RECT rc = { 0, 0, 1280, 768 };
     AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
     window::g_hWnd = CreateWindow(L"PrtWinClass", L"PRT",
         WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,

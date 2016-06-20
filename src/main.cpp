@@ -25,12 +25,17 @@ struct
     GLuint heightmap;
     glm::mat4 m;
 } terrain;
-GLuint cm;
+GLuint cm, testcm, imagecm;
+GLuint testtex[6];
 RECT hrect;
 
 void DrawWorld(glm::mat4 v, glm::mat4 p)
 {
+    static int i = 0;
+    
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    //aa::render::DrawTexturedQuad(testtex[i], 0, 0, 256, 256);
+    //i = (i + 1) % 6;
     aa::render::DrawLODTerrain(terrain.heightmap, terrain.m, v, p, terrain.wShow);
     //aa::render::DrawCubemapAsLatlong(cm, 40, 280, 400, 200);
     //aa::render::DrawTexturedQuad(terrain.heightmap, 440, 280, 200, 200);
@@ -43,7 +48,6 @@ void main()
     glClearColor(54.0f / 255.0f, 122.0f / 255.0f, 165.0f / 255.0f, 1.0f);
     
     GetClientRect(aa::window::g_hWnd, &hrect);
-    glViewport(0, 0, hrect.right, hrect.bottom);
     camera.angle = 0.0f;
     camera.yaw = 0.0f;
     camera.r = 1.0f;
@@ -62,6 +66,19 @@ void main()
         "src/images/top.bmp",
         "src/images/back.bmp",
         "src/images/front.bmp" };
+    imagecm = aa::render::CreteTextureCubemap(filenames);
+
+    const char* filenames_test[6] = {
+        "src/images/posx.bmp",
+        "src/images/negx.bmp",
+        "src/images/posy.bmp",
+        "src/images/negy.bmp",
+        "src/images/posz.bmp",
+        "src/images/negz.bmp" };
+    testcm = aa::render::CreteTextureCubemap(filenames_test);
+
+    for (int i = 0; i < 6; i++)
+        testtex[i] = aa::render::CreateTexture2D(filenames_test[i]);
 
     //cm = aa::render::CreteTextureCubemap(filenames);
     glm::ivec2 cmRes(256, 256);
@@ -89,10 +106,15 @@ void main()
 
         // drawing
         {
-            aa::render::RenderCubemap(cm, cmRes, glm::vec3(0.0f,0.5f, 0.0f), &DrawWorld);
             glViewport(0, 0, hrect.right, hrect.bottom);
-            aa::render::DrawCubemapAsLatlong(cm, 0, 0, 640, 480);
-            //DrawWorld(camera.v(), camera.p);
+            DrawWorld(camera.v(), camera.p);
+            aa::render::RenderCubemap(cm, cmRes, glm::vec3(0.0f, 0.3f, 0.0f), &DrawWorld);
+
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glViewport(0, 0, hrect.right, hrect.bottom);
+            aa::render::DrawCubemapAsLatlong(cm, 880, 568, 400, 200);
+            aa::render::DrawCubemapAsLatlong(testcm, 0, 0, 200, 100);
+            aa::render::DrawCubemapAsLatlong(imagecm, 0, 100, 200, 100);
             // TwDraw();
         }
 
@@ -101,5 +123,8 @@ void main()
 
     // cleanup
     glDeleteTextures(1, &terrain.heightmap);
+    glDeleteTextures(1, &testcm);
+    glDeleteTextures(1, &imagecm);
+    glDeleteTextures(1, &cm);
     // TwTerminate();
 }
