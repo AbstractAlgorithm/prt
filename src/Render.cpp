@@ -324,7 +324,7 @@ struct TerrainLOD
                 void main()
                 {
                     //float h = texture(uHeightmap, uv).r;
-                    fragColor = vec4(h,h,h, 1.0);
+                    fragColor = vec4(uv,h, 1.0);
                 }
             );
             glShaderSource(fs, 1, &fs_shdr, NULL);
@@ -407,6 +407,7 @@ struct TerrainLOD
         glUseProgram(program);
 
         glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
         glEnable(GL_DEPTH_TEST);
         if (wireframe)
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -438,13 +439,13 @@ GLuint aa::render::CreteTextureCubemap(const char* filenames[6])
     GLuint tex;
     glGenTextures(1, &tex);
     glBindTexture(GL_TEXTURE_CUBE_MAP, tex);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
     for (GLuint i = 0; i < 6; i++)
     {
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
         fillBMP(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, filenames[i]);
     }
     return tex;
@@ -595,14 +596,14 @@ GLuint aa::render::CreateCubemapEmpty(glm::ivec2 res)
     GLuint tex;
     glGenTextures(1, &tex);
     glBindTexture(GL_TEXTURE_CUBE_MAP, tex);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
     for (GLuint i = 0; i < 6; i++)
     {
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, res.x, res.y, 0, GL_BGR, GL_UNSIGNED_BYTE, 0);
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, res.x, res.y, 0, GL_BGRA, GL_UNSIGNED_BYTE, 0);
     }
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
     return tex;
@@ -636,36 +637,34 @@ struct CubemapFiller
             glBindRenderbuffer(GL_RENDERBUFFER, rb);
             glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, res.x, res.y);
             glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rb);
-            glBindRenderbuffer(GL_RENDERBUFFER, 0);
             rbres = res;
             init = true;
         }
         // camera
-        glm::mat4 p = glm::perspective(90.0f, 1.0f, 0.01f, 10.0f);
+        glm::mat4 p = glm::perspective(90.0f, 1.0f, 0.01f, 100.0f);
         glm::mat4 v;
 
         glm::vec3 targets[6] = {
-            glm::vec3(+1, 0, 0),
-            glm::vec3(-1, 0, 0),
-            glm::vec3(0, +1, 0),
-            glm::vec3(0, -1, 0),
-            glm::vec3(0, 0, +1),
-            glm::vec3(0, 0, -1)
+            glm::vec3(+1.0f, 0.0f, 0.0f),
+            glm::vec3(-1.0f, 0.0f, 0.0f),
+            glm::vec3(0.0f, +1.0f, 0.0f),
+            glm::vec3(0.0f, -1.0f, 0.0f),
+            glm::vec3(0.0f, 0.0f, -1.0f),
+            glm::vec3(0.0f, 0.0f, +1.0f)
         };
         glm::vec3 ups[6] = {
-            glm::vec3(0, 1, 0),
-            glm::vec3(0, 1, 0),
-            glm::vec3(1, 0, 0),
-            glm::vec3(1, 0, 0),
-            glm::vec3(0, 1, 0),
-            glm::vec3(0, 1, 0)
+            glm::vec3(0.0f, 1.0f, 0.0f),
+            glm::vec3(0.0f, 1.0f, 0.0f),
+            glm::vec3(0.0f, 0.0f, 1.0f),
+            glm::vec3(0.0f, 0.0f, -1.0f),
+            glm::vec3(0.0f, 1.0f, 0.0f),
+            glm::vec3(0.0f, 1.0f, 0.0f)
         };
-
-        glViewport(0, 0, rbres.x, rbres.y);
 
         // render
         for (int i = 0; i < 6; i++)
         {
+            glViewport(0, 0, res.x, res.y);
             // setup target face
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, cubemap, 0);
             // setup camera

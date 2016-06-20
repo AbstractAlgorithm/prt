@@ -61,7 +61,7 @@ namespace aa
 // NVTX
 // #include <nvtx/nvToolsExt.h>
 // ANTTWEAKBAR
-// #include <anttweakbar/AntTweakBar.h>
+ #include <anttweakbar/AntTweakBar.h>
 
 namespace aa
 {

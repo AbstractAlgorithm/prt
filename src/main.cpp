@@ -4,8 +4,6 @@
 
 struct
 {
-    
-    
     glm::mat4 p;
     float angle;
     float yaw;
@@ -29,24 +27,46 @@ GLuint cm, testcm, imagecm;
 GLuint testtex[6];
 RECT hrect;
 
+void RandomWorld()
+{
+    glUseProgram(0);
+    glColor3f(1, 0, 0);
+    glBegin(GL_TRIANGLES);
+    // +x
+    glVertex3f(0.5f, 0.0f, -0.75f);
+    glVertex3f(0.5f, 0.0f, 0.75f);
+    glVertex3f(0.5f, 0.75f, 0.0f);
+    // -x
+    glVertex3f(-0.5f, 0.0f, -1.0f);
+    glVertex3f(-0.5f, 0.0f, 1.0f);
+    glVertex3f(-0.5f, 1.0f, 0.0f);
+    // +y
+    // -y
+    // +z
+    // -z
+    glEnd();
+}
+
 void DrawWorld(glm::mat4 v, glm::mat4 p)
 {
     static int i = 0;
     
+    glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    //aa::render::DrawTexturedQuad(testtex[i], 0, 0, 256, 256);
-    //i = (i + 1) % 6;
+    // aa::render::DrawTexturedQuad(testtex[i], 0, 0, 256, 256);
+    i = (i + 1) % 6;
     aa::render::DrawLODTerrain(terrain.heightmap, terrain.m, v, p, terrain.wShow);
-    //aa::render::DrawCubemapAsLatlong(cm, 40, 280, 400, 200);
-    //aa::render::DrawTexturedQuad(terrain.heightmap, 440, 280, 200, 200);
+    //RandomWorld();
+    //aa::render::DrawCubemapAsLatlong(imagecm, 0, 0, 200, 200);
 }
 
 void main()
 {
     // init
-    // TwInit(TW_OPENGL, NULL);
-    glClearColor(54.0f / 255.0f, 122.0f / 255.0f, 165.0f / 255.0f, 1.0f);
+    glViewport(0, 0, hrect.right, hrect.bottom);
+    TwInit(TW_OPENGL, NULL);
     
+    glClearColor(54.0f / 255.0f, 122.0f / 255.0f, 165.0f / 255.0f, 1.0f);
     GetClientRect(aa::window::g_hWnd, &hrect);
     camera.angle = 0.0f;
     camera.yaw = 0.0f;
@@ -106,16 +126,20 @@ void main()
 
         // drawing
         {
-            glViewport(0, 0, hrect.right, hrect.bottom);
-            DrawWorld(camera.v(), camera.p);
-            aa::render::RenderCubemap(cm, cmRes, glm::vec3(0.0f, 0.3f, 0.0f), &DrawWorld);
 
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            // fill cubemap
+            aa::render::RenderCubemap(cm, cmRes, glm::vec3(0.0f, 0.7f, 0.0f), &DrawWorld);
+
+            // render
             glViewport(0, 0, hrect.right, hrect.bottom);
-            aa::render::DrawCubemapAsLatlong(cm, 880, 568, 400, 200);
-            aa::render::DrawCubemapAsLatlong(testcm, 0, 0, 200, 100);
-            aa::render::DrawCubemapAsLatlong(imagecm, 0, 100, 200, 100);
-            // TwDraw();
+            glClearColor(54.0f / 255.0f, 122.0f / 255.0f, 165.0f / 255.0f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            aa::render::DrawLODTerrain(terrain.heightmap, terrain.m, camera.v(), camera.p, terrain.wShow);
+            aa::render::DrawCubemapAsLatlong(cm, 480, 368, 800, 400);
+            aa::render::DrawCubemapAsLatlong(testcm, 0, 368, 400, 200);
+            aa::render::DrawCubemapAsLatlong(imagecm, 0, 568, 400, 200);
+            //aa::render::DrawTexturedQuad(testtex[5], 440, 280, 200, 200);
+            TwDraw();
         }
 
         aa::window::SwapBuffersBackend();
@@ -126,5 +150,5 @@ void main()
     glDeleteTextures(1, &testcm);
     glDeleteTextures(1, &imagecm);
     glDeleteTextures(1, &cm);
-    // TwTerminate();
+    TwTerminate();
 }

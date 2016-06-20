@@ -149,9 +149,7 @@ LRESULT CALLBACK window::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
     PAINTSTRUCT ps;
     HDC hdc;
 
-#ifdef USE_ANTTWBAR_BACKEND
     TwEventWin(hWnd, message, wParam, lParam);
-#endif
 
     switch (message)
     {
