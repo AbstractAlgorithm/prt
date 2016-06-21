@@ -19,15 +19,16 @@ struct
 } camera;
 struct
 {
-    bool wPrev, wShow;
     GLuint heightmap;
     glm::mat4 m;
 } terrain;
 GLuint cm, testcm, imagecm;
 GLuint testtex[6];
 RECT hrect;
-
+bool wireframe;
 const glm::ivec2 cmRes(256, 256);
+float cm_height;
+TwBar* uibar;
 
 void RandomWorld()
 {
@@ -53,18 +54,15 @@ void DrawWorld(glm::mat4 v, glm::mat4 p)
 {
     static int i = 0;
     
-    if (i<2)
-        glClearColor(0.3f, 0.0f, 0.0f, 1.0f);
-    else if (i<4)
-        glClearColor(0.0f, 0.3f, 0.0f, 1.0f);
-    else
-        glClearColor(0.0f, 0.0f, 0.3f, 1.0f);
+    if (i<2)        glClearColor(0.3f, 0.0f, 0.0f, 1.0f);
+    else if (i<4)   glClearColor(0.0f, 0.3f, 0.0f, 1.0f);
+    else            glClearColor(0.0f, 0.0f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
     //aa::render::DrawTexturedQuad(testtex[i], 0, 0, cmRes.x, cmRes.y);
-    //aa::render::DrawLODTerrain(terrain.heightmap, terrain.m, v, p, terrain.wShow);
-    aa::render::RenderSkybox(testcm, v, p);
+    aa::render::DrawLODTerrain(terrain.heightmap, terrain.m, v, p);
+    aa::render::RenderSkybox(imagecm, v, p);
     i = (i + 1) % 6;
     //RandomWorld();
     //aa::render::DrawCubemapAsLatlong(imagecm, 0, 0, 200, 200);
@@ -85,9 +83,14 @@ void main()
     
     terrain.m = glm::mat4(1.0f);
     terrain.m = glm::translate(terrain.m, glm::vec3(-0.5f, 0.0f, -0.5f));
-    terrain.wPrev = false;
-    terrain.wShow = false;
+    wireframe = false;
     terrain.heightmap = aa::render::CreateTexture2D("src/images/terrain1.bmp");
+    cm_height = 0.6f;
+
+    uibar = TwNewBar("PRT");
+    TwAddVarRW(uibar, "Wireframe", TW_TYPE_BOOLCPP, &wireframe, "");
+    TwAddVarRW(uibar, "Radius", TW_TYPE_FLOAT, &camera.r, " min=0.01 max=1 step=0.01 ");
+    TwAddVarRW(uibar, "Height", TW_TYPE_FLOAT, &cm_height, " min=0.0 max=3 step=0.005 ");
 
     const char* filenames[6] = {
         "src/images/right.bmp",
@@ -117,7 +120,6 @@ void main()
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
 
-
     // loop
     while (!aa::window::windowShouldClose())
     {
@@ -133,24 +135,23 @@ void main()
             // zoom in-out
             if (aa::input::keys[aa::input::Q])      camera.r -= 0.01f;
             if (aa::input::keys[aa::input::E])      camera.r += 0.01f;
-            // toggle wireframe
-            if (!aa::input::keys[aa::input::W] && terrain.wPrev) terrain.wShow = !terrain.wShow;
-            terrain.wPrev = aa::input::keys[aa::input::W];
         }
 
         // drawing
         {
 
             // fill cubemap
-            aa::render::FillCubemap(cm, cmRes, glm::vec3(0.0f, 0.0f, 0.0f), &DrawWorld);
+            aa::render::FillCubemap(cm, cmRes, glm::vec3(0.0f, cm_height, 0.0f), &DrawWorld);
 
             // render
+            if (wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+            else glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
             
             glViewport(0, 0, hrect.right, hrect.bottom);
             glClearColor(54.0f / 255.0f, 122.0f / 255.0f, 165.0f / 255.0f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            //aa::render::DrawLODTerrain(terrain.heightmap, terrain.m, camera.v(), camera.p, terrain.wShow);
-            //aa::render::RenderSkybox(imagecm, camera.v(), camera.p);
+            aa::render::DrawLODTerrain(terrain.heightmap, terrain.m, camera.v(), camera.p);
+            aa::render::RenderSkybox(imagecm, camera.v(), camera.p);
             
             aa::render::DrawCubemapAsLatlong(cm, 480, 368, 800, 400);
             aa::render::DrawCubemapAsLatlong(testcm, 0, 368, 400, 200);

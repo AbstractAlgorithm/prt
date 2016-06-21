@@ -402,16 +402,12 @@ struct TerrainLOD
         program = 0;
     }
 
-    void Draw(GLuint heightmap, glm::mat4 m, glm::mat4 v, glm::mat4 p, bool wireframe = false)
+    void Draw(GLuint heightmap, glm::mat4 m, glm::mat4 v, glm::mat4 p)
     {
         glUseProgram(program);
 
-        glEnable(GL_CULL_FACE);
-        glCullFace(GL_BACK);
-        if (wireframe)
-            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        else
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        glDisable(GL_CULL_FACE);
+        //glCullFace(GL_BACK);
         RECT hrect;
         GetClientRect(aa::window::g_hWnd, &hrect);
         glUniform2f(uloc_ss, (float)hrect.right, (float)hrect.bottom);
@@ -428,10 +424,10 @@ struct TerrainLOD
     }
 };
 
-void aa::render::DrawLODTerrain(GLuint heightmap, glm::mat4 m, glm::mat4 v, glm::mat4 p, bool wireframe)
+void aa::render::DrawLODTerrain(GLuint heightmap, glm::mat4 m, glm::mat4 v, glm::mat4 p)
 {
     static TerrainLOD terrain;
-    terrain.Draw(heightmap, m, v, p, wireframe);
+    terrain.Draw(heightmap, m, v, p);
 }
 
 GLuint aa::render::CreteTextureCubemap(const char* filenames[6])
@@ -642,7 +638,7 @@ struct CubemapFiller
         }
         // camera
         glm::mat4 p = glm::perspective(90.0f, 1.0f, 0.1f, 2.0f);
-        float n = 0.1f, f = 2.0f;
+        float n = 0.01f, f = 10.0f;
         p[0][0] = 1.0f;
         p[1][1] = 1.0f;
         p[2][2] = -f / (f - n);
