@@ -153,9 +153,9 @@ void main()
             aa::render::DrawLODTerrain(terrain.heightmap, terrain.m, camera.v(), camera.p);
             aa::render::RenderSkybox(imagecm, camera.v(), camera.p);
             
-            aa::render::DrawCubemapAsLatlong(cm, 480, 368, 800, 400);
-            aa::render::DrawCubemapAsLatlong(testcm, 0, 368, 400, 200);
-            aa::render::DrawCubemapAsLatlong(imagecm, 0, 568, 400, 200);
+            aa::render::DrawCubemapAsLatlong(cm, 880, 568, 400, 200);
+            //aa::render::DrawCubemapAsLatlong(testcm, 0, 368, 400, 200);
+            //aa::render::DrawCubemapAsLatlong(imagecm, 0, 568, 400, 200);
             //aa::render::DrawTexturedQuad(testtex[5], 440, 280, 200, 200);
             
             TwDraw();
