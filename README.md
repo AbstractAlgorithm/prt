@@ -9,7 +9,7 @@ precomputed radiance transport
     - ~~fix cracks~~
     - textured and nicely shaded
 - cubemap
-    - render irradiance cubemap from a point
+    - ~~render irradiance cubemap from a point~~
     - ~~debug view~~
     - convert cubemap to SH
     - irradiance volumes

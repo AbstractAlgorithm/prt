@@ -408,7 +408,6 @@ struct TerrainLOD
 
         glEnable(GL_CULL_FACE);
         glCullFace(GL_BACK);
-        glEnable(GL_DEPTH_TEST);
         if (wireframe)
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         else
@@ -425,6 +424,7 @@ struct TerrainLOD
 
         glBindVertexArray(vao);
         glDrawArrays(GL_PATCHES, 0, patchCount*patchCount * 4);
+        glDisable(GL_CULL_FACE);
     }
 };
 
@@ -641,22 +641,29 @@ struct CubemapFiller
             init = true;
         }
         // camera
-        glm::mat4 p = glm::perspective(90.0f, 1.0f, 0.01f, 100.0f);
-        glm::mat4 v;
+        glm::mat4 p = glm::perspective(90.0f, 1.0f, 0.1f, 2.0f);
+        float n = 0.1f, f = 2.0f;
+        p[0][0] = 1.0f;
+        p[1][1] = 1.0f;
+        p[2][2] = -f / (f - n);
+        p[2][3] = -1.0f;
+        p[3][2] = -(f*n) / (f - n);
+        //p = glm::ortho(-1.0f, 1.0f, -1.0f, 1.0f);
+        glm::mat4 v = glm::mat4(1.0f);
 
         glm::vec3 targets[6] = {
             glm::vec3(+1.0f, 0.0f, 0.0f),
             glm::vec3(-1.0f, 0.0f, 0.0f),
             glm::vec3(0.0f, +1.0f, 0.0f),
             glm::vec3(0.0f, -1.0f, 0.0f),
-            glm::vec3(0.0f, 0.0f, -1.0f),
-            glm::vec3(0.0f, 0.0f, +1.0f)
+            glm::vec3(0.0f, 0.0f, +1.0f),
+            glm::vec3(0.0f, 0.0f, -1.0f)
         };
         glm::vec3 ups[6] = {
             glm::vec3(0.0f, 1.0f, 0.0f),
             glm::vec3(0.0f, 1.0f, 0.0f),
-            glm::vec3(0.0f, 0.0f, 1.0f),
             glm::vec3(0.0f, 0.0f, -1.0f),
+            glm::vec3(0.0f, 0.0f, 1.0f),
             glm::vec3(0.0f, 1.0f, 0.0f),
             glm::vec3(0.0f, 1.0f, 0.0f)
         };
@@ -668,7 +675,11 @@ struct CubemapFiller
             // setup target face
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, cubemap, 0);
             // setup camera
-            v = glm::lookAt(position, position - targets[i], ups[i]);
+            v = glm::lookAt(position, position + targets[i], ups[i]);
+            v[0][2] *= -1.0f;
+            v[1][2] *= -1.0f;
+            v[2][2] *= -1.0f;
+            v[3][2] *= -1.0f;
             // draw
             (*drawWorldFunc)(v, p);
         }
@@ -676,10 +687,128 @@ struct CubemapFiller
     }
 };
 
-void aa::render::RenderCubemap(GLuint cubemap, glm::ivec2 res, glm::vec3 position, void(*drawWorldFunc)(glm::mat4 v, glm::mat4 p))
+void aa::render::FillCubemap(GLuint cubemap, glm::ivec2 res, glm::vec3 position, void(*drawWorldFunc)(glm::mat4 v, glm::mat4 p))
 {
     static CubemapFiller cmf;
     cmf.Draw(cubemap, res, position, drawWorldFunc);
+}
+
+struct Skybox
+{
+    GLuint vao, vbo, program;
+    GLint uloc_skybox, uloc_v, uloc_p;
+
+    Skybox()
+    {
+        // init shaders
+        program = glCreateProgram();
+        {
+            GLuint vs = glCreateShader(GL_VERTEX_SHADER);
+            static const char* vs_shdr = GLSLify(330,
+                in vec3 iPos;
+
+                uniform mat4 uView;
+                uniform mat4 uProj;
+
+                out vec3 coord;
+
+                void main()
+                {
+                    vec4 pos = uProj * uView * vec4(iPos, 1.0);
+                    //pos.xyz = pos.xyz * 0.2;
+                    gl_Position = pos.xyww;
+                    //gl_Position = vec4(iPos, 1.0);
+                    coord = -iPos;
+                }
+            );
+            glShaderSource(vs, 1, &vs_shdr, NULL);
+            glCompileShader(vs);
+            glAttachShader(program, vs);
+
+            GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
+            const char* fs_shdr = GLSLify(330,
+                in vec3 coord;
+                uniform samplerCube uSkybox;
+                out vec4 fragColor;
+
+                void main()
+                {
+                    fragColor = texture(uSkybox, coord);
+                }
+            );
+            glShaderSource(fs, 1, &fs_shdr, NULL);
+            glCompileShader(fs);
+            glAttachShader(program, fs);
+
+            glLinkProgram(program);
+            glDeleteShader(vs);
+            glDeleteShader(fs);
+            {
+                int infologLen = 0;
+                int charsWritten = 0;
+                GLchar *infoLog = NULL;
+                glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infologLen);
+                if (infologLen > 0)
+                {
+                    infoLog = (GLchar*)malloc(infologLen);
+                    if (infoLog == NULL)
+                        return;
+                    glGetProgramInfoLog(program, infologLen, &charsWritten, infoLog);
+                }
+                printf("%s", infoLog);
+                delete[] infoLog;
+            }
+        }
+        uloc_skybox = glGetUniformLocation(program, "uSkybox");
+        uloc_v = glGetUniformLocation(program, "uView");
+        uloc_p = glGetUniformLocation(program, "uProj");
+
+        // init fs quad
+        glGenVertexArrays(1, &vao);
+        glGenBuffers(1, &vbo);
+        glBindVertexArray(vao);
+        const GLfloat verts[3 * 3 * 2 * 6] = { -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f };
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        glBindVertexArray(0);
+    }
+
+    ~Skybox()
+    {
+        glBindVertexArray(0);
+        glDeleteBuffers(1, &vbo);
+        glDeleteVertexArrays(1, &vao);
+        vbo = 0;
+        vao = 0;
+
+        glDeleteProgram(program);
+        program = 0;
+    }
+
+    void Draw(GLuint cubemap, glm::mat4 v, glm::mat4 p)
+    {
+        glUseProgram(program);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap);
+        glUniform1i(uloc_skybox, 0);
+        glm::mat4 vnt = v;
+        vnt[3][0] = 0.0f;
+        vnt[3][1] = 0.0f;
+        vnt[3][2] = 0.0f;
+        glUniformMatrix4fv(uloc_v, 1, GL_FALSE, glm::value_ptr(vnt));
+        glUniformMatrix4fv(uloc_p, 1, GL_FALSE, glm::value_ptr(p));
+
+        glBindVertexArray(vao);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+    }
+};
+
+void aa::render::RenderSkybox(GLuint cubemap, glm::mat4 v, glm::mat4 p)
+{
+    static Skybox sky;
+    sky.Draw(cubemap,v,p);
 }
 
 #undef GLSLify

@@ -27,6 +27,8 @@ GLuint cm, testcm, imagecm;
 GLuint testtex[6];
 RECT hrect;
 
+const glm::ivec2 cmRes(256, 256);
+
 void RandomWorld()
 {
     glUseProgram(0);
@@ -51,11 +53,19 @@ void DrawWorld(glm::mat4 v, glm::mat4 p)
 {
     static int i = 0;
     
-    glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+    if (i<2)
+        glClearColor(0.3f, 0.0f, 0.0f, 1.0f);
+    else if (i<4)
+        glClearColor(0.0f, 0.3f, 0.0f, 1.0f);
+    else
+        glClearColor(0.0f, 0.0f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    // aa::render::DrawTexturedQuad(testtex[i], 0, 0, 256, 256);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
+    //aa::render::DrawTexturedQuad(testtex[i], 0, 0, cmRes.x, cmRes.y);
+    //aa::render::DrawLODTerrain(terrain.heightmap, terrain.m, v, p, terrain.wShow);
+    aa::render::RenderSkybox(testcm, v, p);
     i = (i + 1) % 6;
-    aa::render::DrawLODTerrain(terrain.heightmap, terrain.m, v, p, terrain.wShow);
     //RandomWorld();
     //aa::render::DrawCubemapAsLatlong(imagecm, 0, 0, 200, 200);
 }
@@ -101,8 +111,12 @@ void main()
         testtex[i] = aa::render::CreateTexture2D(filenames_test[i]);
 
     //cm = aa::render::CreteTextureCubemap(filenames);
-    glm::ivec2 cmRes(256, 256);
     cm = aa::render::CreateCubemapEmpty(cmRes);
+
+
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
+
 
     // loop
     while (!aa::window::windowShouldClose())
@@ -128,17 +142,21 @@ void main()
         {
 
             // fill cubemap
-            aa::render::RenderCubemap(cm, cmRes, glm::vec3(0.0f, 0.7f, 0.0f), &DrawWorld);
+            aa::render::FillCubemap(cm, cmRes, glm::vec3(0.0f, 0.0f, 0.0f), &DrawWorld);
 
             // render
+            
             glViewport(0, 0, hrect.right, hrect.bottom);
             glClearColor(54.0f / 255.0f, 122.0f / 255.0f, 165.0f / 255.0f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            aa::render::DrawLODTerrain(terrain.heightmap, terrain.m, camera.v(), camera.p, terrain.wShow);
+            //aa::render::DrawLODTerrain(terrain.heightmap, terrain.m, camera.v(), camera.p, terrain.wShow);
+            //aa::render::RenderSkybox(imagecm, camera.v(), camera.p);
+            
             aa::render::DrawCubemapAsLatlong(cm, 480, 368, 800, 400);
             aa::render::DrawCubemapAsLatlong(testcm, 0, 368, 400, 200);
             aa::render::DrawCubemapAsLatlong(imagecm, 0, 568, 400, 200);
             //aa::render::DrawTexturedQuad(testtex[5], 440, 280, 200, 200);
+            
             TwDraw();
         }
 
