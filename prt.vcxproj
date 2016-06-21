@@ -80,6 +80,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="sh.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\Render.cpp" />
     <ClCompile Include="src\WinEntry.cpp" />
