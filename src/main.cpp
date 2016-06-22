@@ -118,7 +118,7 @@ void main()
     cm = aa::render::CreateCubemapEmpty(cmRes);
 
     const float data[6] = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
-    double* shcoeff = aa::sh::blabla((float*)data, 5);
+    double* shcoeff = aa::sh::blabla((float*)data, 3);
     double koe[25];
     memcpy(koe, shcoeff, 25 * sizeof(double));
     delete[] shcoeff;

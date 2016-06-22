@@ -274,6 +274,8 @@ aa::sh::SHPainter::~SHPainter()
 double* aa::sh::blabla(float* data, uint8_t bands)
 {
     double* coeff = new double[bands*bands];
+    for (int i = 0; i < bands*bands; coeff[i++] = 0.0);
+
     for (uint8_t fi = 0; fi < 6; fi++)
     {
         // get color
@@ -290,19 +292,20 @@ double* aa::sh::blabla(float* data, uint8_t bands)
         }
         // solid angle
         double sa = 2.0*PI / 3.0;
+        double phi = atan2(dir.y, dir.x);
+        double theta = acos(dir.z);
 
-        for (unsigned l = 0; l < bands; l++)
+        for (int32_t l = 0; l < bands; l++)
         {
-            for (int m = -l; m < l + 1; m++)
+            for (int32_t m = -l; m <= l; m++)
             {
                 char i = l*(l + 1) + m;
-                double phi = atan2(dir.y, dir.x);
-                double theta = acos(dir.z);
                 double _sh = SH(l, m, theta, phi);
-                coeff[i] = _sh * sa * col;
+                coeff[i] += _sh * sa * col;
             }
         }
     }
+    for (int i = 0; i < bands*bands; coeff[i++] /= PI4);
     return coeff;
 }
 
