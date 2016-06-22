@@ -13,7 +13,7 @@
 // 2. P{m,m} = (-1)^m * (2m-1)!! * (1-x*x)^(m/2)
 // 3. P{m,m+1} = x(2m+1) * P{m,m}
 
-double P(uint32_t l, uint32_t m, double x)
+double P(uint32_t l, int32_t m, double x)
 {
     double pmm = 1.0;
     if (m > 0)
@@ -59,9 +59,9 @@ double P(uint32_t l, uint32_t m, double x)
 
 // Y{m,l} = Y{i} where i = l(l+1) + m
 
-uint32_t factorial(uint32_t n)
+int32_t factorial(int32_t n)
 {
-    const uint32_t table[13] =
+    const int32_t table[13] =
     {
         1,
         1,
@@ -87,7 +87,7 @@ uint32_t factorial(uint32_t n)
 }
 
 
-double K(uint32_t l, uint32_t m)
+double K(int32_t l, int32_t m)
 {
     double temp = ((2.0*l + 1.0) * factorial(l - m)) / (PI4*factorial(l + m));
     return sqrt(temp);
@@ -100,7 +100,7 @@ m:      [-l..l]
 theta:  [0..Pi]
 phi:    [0..2*Pi]
 */
-double SH(uint32_t l, uint32_t m, double theta, double phi)
+double SH(int32_t l, int32_t m, double theta, double phi)
 {
     if (m == 0)     return K(l, 0) *P(l, m, cos(theta));
     else if (m < 0) return SQRT_2 * K(l, m) * sin(-m*phi) * P(l, -m, cos(theta));
@@ -114,28 +114,118 @@ double SH(uint32_t l, uint32_t m, double theta, double phi)
 // Spherical Harmonics API
 // -----------------------------------------------------------------------------
 
-struct SHGenerator
+aa::sh::SHGenerator::SHGenerator()
 {
-    GLuint program;
+    GLuint cs = glCreateShader(GL_COMPUTE_SHADER);
+    static const char* shader_src = GLSLify(430,
+        layout(local_size_x = 16, local_size_y = 16) in;
 
-    SHGenerator()
+        void main()
+        {
+
+        }
+    );
+    glShaderSource(cs, 1, &shader_src, NULL);
+    glCompileShader(cs);
+
+    program = glCreateProgram();
+    glAttachShader(program, cs);
+    glLinkProgram(program);
+    glDeleteShader(cs);
     {
-        GLuint cs = glCreateShader(GL_COMPUTE_SHADER);
-        static const char* shader_src = GLSLify(430,
-            layout(local_size_x = 16, local_size_y = 16) in;
+        int infologLen = 0;
+        int charsWritten = 0;
+        GLchar *infoLog = NULL;
+        glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infologLen);
+        if (infologLen > 0)
+        {
+            infoLog = (GLchar*)malloc(infologLen);
+            if (infoLog == NULL)
+                return;
+            glGetProgramInfoLog(program, infologLen, &charsWritten, infoLog);
+        }
+        printf("%s", infoLog);
+        delete[] infoLog;
+    }
+}
+
+aa::sh::SHGenerator::~SHGenerator()
+{
+    glDeleteProgram(program);
+    program = 0;
+}
+
+// -----------------------------------------------------------------------------
+
+aa::sh::SHPainter::SHPainter()
+{
+    // init shaders
+    program = glCreateProgram();
+    {
+        GLuint vs = glCreateShader(GL_VERTEX_SHADER);
+        static const char* vs_shdr = GLSLify(330,
+            in vec2 iPos;
+            uniform vec2 uRes;
+            uniform vec4 uDim;
+            out vec2 uv;
+
+        
+            void main()
+            {
+                vec2 sz = 2.0 * (uDim.zw / uRes);
+                vec2 disp = 2.0 * (uDim.xy / uRes);
+                vec2 p = iPos * 0.5 + vec2(0.5, 0.5);
+                p *= sz;
+                p += disp - vec2(1, 1);
+                gl_Position = vec4(p.x, -p.y, 0.5, 1.0);
+
+                uv = (iPos + vec2(1.0)) * 0.5;
+            }
+        );
+        glShaderSource(vs, 1, &vs_shdr, NULL);
+        glCompileShader(vs);
+        glAttachShader(program, vs);
+
+        GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
+        const char* fs_shdr = GLSLify(330,
+            in vec2 uv;
+            // add SH somehow
+            out vec4 fragColor;
+
+            vec3 vecFromLatLong(vec2 _uv)
+            {
+                float pi = 3.14159265;
+                float twoPi = 2.0*pi;
+                float phi = _uv.x * twoPi;
+                float theta = _uv.y * pi;
+
+                vec3 result;
+                result.x = -sin(theta)*sin(phi);
+                result.y = -cos(theta);
+                result.z = -sin(theta)*cos(phi);
+
+                return result;
+            }
+
+            vec3 evalSH(vec3 dir)
+            {
+                vec3 col = vec3(0);
+                return col;
+            }
 
             void main()
             {
-
+                vec3 dir = vecFromLatLong(uv);
+                fragColor = vec4(evalSH(dir),1.0);
             }
         );
-        glShaderSource(cs, 1, &shader_src, NULL);
-        glCompileShader(cs);
+        glShaderSource(fs, 1, &fs_shdr, NULL);
+        glCompileShader(fs);
+        glAttachShader(program, fs);
 
-        program = glCreateProgram();
-        glAttachShader(program, cs);
         glLinkProgram(program);
-        glDeleteShader(cs);
+        glDeleteShader(vs);
+        glDeleteShader(fs);
         {
             int infologLen = 0;
             int charsWritten = 0;
@@ -152,28 +242,67 @@ struct SHGenerator
             delete[] infoLog;
         }
     }
+    uloc_res = glGetUniformLocation(program, "uRes");
+    uloc_tex = glGetUniformLocation(program, "uTex");
+    uloc_dim = glGetUniformLocation(program, "uDim");
 
-    ~SHGenerator()
-    {
-        glDeleteProgram(program);
-        program = 0;
-    }
+    // init quad
+    glGenVertexArrays(1, &vao);
+    glGenBuffers(1, &vbo);
 
-    double* gen(GLuint cubemap, glm::ivec2 res, uint32_t bands)
-    {
-        // setup uniforms
-        // bind cubemap
-        // declare workgroup size depenging on the size
-        // allocate memory for the results
-        // bind the memory for the result to the shader
-        // invoke shader (dispatch)
-        return 0;
-    }
-};
+    glBindVertexArray(vao);
+    GLfloat verts[12] = { -1, -1, 1, 1, -1, 1, -1, -1, 1, -1, 1, 1 };
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
+    glBindVertexArray(0);
+}
 
-double* aa::sh::GenerateCoefficients(GLuint cubemap, glm::ivec2 res, uint32_t bands)
+aa::sh::SHPainter::~SHPainter()
 {
-    static SHGenerator shgen;
-    return shgen.gen(cubemap, res, bands);
+    glBindVertexArray(0);
+    glDeleteBuffers(1, &vbo);
+    glDeleteVertexArrays(1, &vao);
+    vbo = 0;
+    vao = 0;
+
+    glDeleteProgram(program);
+    program = 0;
+}
+
+double* aa::sh::blabla(float* data, uint8_t bands)
+{
+    double* coeff = new double[bands*bands];
+    for (uint8_t fi = 0; fi < 6; fi++)
+    {
+        // get color
+        float col = data[fi];
+        glm::vec3 dir;
+        switch (fi)
+        {
+            case 0: dir = glm::vec3(+1, 0, 0); break;
+            case 1: dir = glm::vec3(-1, 0, 0); break;
+            case 2: dir = glm::vec3(0, +1, 0); break;
+            case 3: dir = glm::vec3(0, -1, 0); break;
+            case 4: dir = glm::vec3(0, 0, +1); break;
+            case 5: dir = glm::vec3(0, 0, -1); break;
+        }
+        // solid angle
+        double sa = 2.0*PI / 3.0;
+
+        for (unsigned l = 0; l < bands; l++)
+        {
+            for (int m = -l; m < l + 1; m++)
+            {
+                char i = l*(l + 1) + m;
+                double phi = atan2(dir.y, dir.x);
+                double theta = acos(dir.z);
+                double _sh = SH(l, m, theta, phi);
+                coeff[i] = _sh * sa * col;
+            }
+        }
+    }
+    return coeff;
 }
 

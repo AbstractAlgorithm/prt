@@ -453,8 +453,6 @@ struct CubemapLatlong
                 uniform vec4 uDim;
                 out vec2 uv;
 
-                /* Cubemap as latlong shader by:
-                Dario Manesku (https://github.com/dariomanesku) */
                 void main()
                 {
                     vec2 sz = 2.0 * (uDim.zw / uRes);
@@ -473,6 +471,8 @@ struct CubemapLatlong
 
             GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
             const char* fs_shdr = GLSLify(330,
+                /* Cubemap as latlong shader by:
+                Dario Manesku (https://github.com/dariomanesku) */
                 in vec2 uv;
                 uniform samplerCube uTex;
                 out vec4 fragColor;
