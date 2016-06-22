@@ -1,16 +1,5 @@
 #include "Render.h"
 
-#define GLSLify(version, shader) "#version " #version "\n" #shader
-#define LFX_ERRCHK(glFn) \
-do { \
-glFn; \
-GLenum err = glGetError(); \
-const GLubyte* errmsg = gluErrorString(err); \
-if (err != GL_NO_ERROR)    \
-    printf("ERROR: 0x%x (%s)\n%s : %d\n", err, errmsg, __FILE__, __LINE__); \
-} while (0)
-
-
 HRESULT fillBMP(GLenum target, std::string name)
 {
     unsigned char header[54];
@@ -637,13 +626,13 @@ struct CubemapFiller
             init = true;
         }
         // camera
-        glm::mat4 p = glm::perspective(90.0f, 1.0f, 0.1f, 2.0f);
-        float n = 0.01f, f = 10.0f;
+        glm::mat4 p = glm::perspective(3.14156592f/2.0f, 1.0f, 0.01f, 10.0f);
+        /*float n = 0.01f, f = 10.0f;
         p[0][0] = 1.0f;
         p[1][1] = 1.0f;
         p[2][2] = -f / (f - n);
         p[2][3] = -1.0f;
-        p[3][2] = -(f*n) / (f - n);
+        p[3][2] = -(f*n) / (f - n);*/
         //p = glm::ortho(-1.0f, 1.0f, -1.0f, 1.0f);
         glm::mat4 v = glm::mat4(1.0f);
 
@@ -672,10 +661,10 @@ struct CubemapFiller
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, cubemap, 0);
             // setup camera
             v = glm::lookAt(position, position + targets[i], ups[i]);
-            v[0][2] *= -1.0f;
+            /*v[0][2] *= -1.0f;
             v[1][2] *= -1.0f;
             v[2][2] *= -1.0f;
-            v[3][2] *= -1.0f;
+            v[3][2] *= -1.0f;*/
             // draw
             (*drawWorldFunc)(v, p);
         }
@@ -806,6 +795,4 @@ void aa::render::RenderSkybox(GLuint cubemap, glm::mat4 v, glm::mat4 p)
     static Skybox sky;
     sky.Draw(cubemap,v,p);
 }
-
-#undef GLSLify
 

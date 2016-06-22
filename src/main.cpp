@@ -61,7 +61,7 @@ void DrawWorld(glm::mat4 v, glm::mat4 p)
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
     //aa::render::DrawTexturedQuad(testtex[i], 0, 0, cmRes.x, cmRes.y);
-    aa::render::DrawLODTerrain(terrain.heightmap, terrain.m, v, p);
+    //aa::render::DrawLODTerrain(terrain.heightmap, terrain.m, v, p);
     aa::render::RenderSkybox(imagecm, v, p);
     i = (i + 1) % 6;
     //RandomWorld();
@@ -150,7 +150,7 @@ void main()
             glViewport(0, 0, hrect.right, hrect.bottom);
             glClearColor(54.0f / 255.0f, 122.0f / 255.0f, 165.0f / 255.0f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            aa::render::DrawLODTerrain(terrain.heightmap, terrain.m, camera.v(), camera.p);
+            //aa::render::DrawLODTerrain(terrain.heightmap, terrain.m, camera.v(), camera.p);
             aa::render::RenderSkybox(imagecm, camera.v(), camera.p);
             
             aa::render::DrawCubemapAsLatlong(cm, 880, 568, 400, 200);

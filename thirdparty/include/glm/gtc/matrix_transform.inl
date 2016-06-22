@@ -488,23 +488,23 @@ namespace glm
 		tvec3<T, P> const & up
 	)
 	{
-		tvec3<T, P> const f(normalize(center - eye));
-		tvec3<T, P> const s(normalize(cross(f, up)));
-		tvec3<T, P> const u(cross(s, f));
+		tvec3<T, P> const dir(normalize(center - eye));
+        tvec3<T, P> const right(normalize(cross(dir, up)));
+		tvec3<T, P> const u(cross(right, dir));
 
 		tmat4x4<T, P> Result(1);
-		Result[0][0] = s.x;
-		Result[1][0] = s.y;
-		Result[2][0] = s.z;
+        Result[0][0] = right.x;
+        Result[1][0] = right.y;
+        Result[2][0] = right.z;
 		Result[0][1] = u.x;
 		Result[1][1] = u.y;
 		Result[2][1] = u.z;
-		Result[0][2] =-f.x;
-		Result[1][2] =-f.y;
-		Result[2][2] =-f.z;
-		Result[3][0] =-dot(s, eye);
-		Result[3][1] =-dot(u, eye);
-		Result[3][2] = dot(f, eye);
+		Result[0][2] = dir.x;
+		Result[1][2] = dir.y;
+		Result[2][2] = dir.z;
+        Result[3][0] = -dot(right, eye);
+		Result[3][1] = -dot(u, eye);
+		Result[3][2] = -dot(dir, eye);
 		return Result;
 	}
 

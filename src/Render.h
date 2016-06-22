@@ -1,4 +1,16 @@
+#pragma once
+
 #include "WinEntry.h"
+
+#define GLSLify(version, shader) "#version " #version "\n" #shader
+#define LFX_ERRCHK(glFn) \
+do { \
+glFn; \
+GLenum err = glGetError(); \
+const GLubyte* errmsg = gluErrorString(err); \
+if (err != GL_NO_ERROR)    \
+    printf("ERROR: 0x%x (%s)\n%s : %d\n", err, errmsg, __FILE__, __LINE__); \
+} while (0)
 
 namespace aa
 {
