@@ -18,6 +18,7 @@ Solid angle of a rectangular plate: http://www.mpia.de/~mathar/public/mathar2005
 Cubemap texel solid angle: http://www.rorydriscoll.com/2012/01/15/cubemap-texel-solid-angle/
 "Spherical Harmonics Lighting: The Gritty Details" by Robin Green"
 CUbemap Filtering Tool: https://github.com/dariomanesku/cmft
+https://github.com/bkaradzic/bgfx/blob/master/examples/28-wireframe/fs_wf_mesh.sc
 */
 
 namespace aa
