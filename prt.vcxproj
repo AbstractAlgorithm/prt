@@ -80,13 +80,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="sh.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\Render.cpp" />
+    <ClCompile Include="src\SH.cpp" />
     <ClCompile Include="src\WinEntry.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Render.h" />
+    <ClInclude Include="src\SH.h" />
     <ClInclude Include="src\WinEntry.h" />
   </ItemGroup>
   <ItemGroup>
