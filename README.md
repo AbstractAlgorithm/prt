@@ -21,11 +21,21 @@ precomputed radiance transport
     - debug SH (eval)
     - irradiance volumes
 - prt
-    - generate prt for a point
+    - model loader
+    - raytracer and sampler
+    - diffuse
+        - direct
+        - self-shadow
+        - self-interreflection
     - debug view
+    - specular
+        - ?
+    - volumetric
+        - direct + self-shadow
+    - neighborhood transfer (soft shadows)
+        - direct + self-shadow
     - radiance transfer volumes
-- app
-    - debug view with prt and irradiance
-    - shade with prt and irradiance
-    - interpolate between the local prts
 
+- dynamic
+    - dynamic scenes
+    - dynamic transfer functions
