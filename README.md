@@ -3,22 +3,15 @@ precomputed radiance transport
 
 ### todo
 
-- ~~terrain~~
-    - ~~render~~
-    - ~~tessellated LOD~~
-    - ~~fix cracks~~
+- ~~scene~~
+    - ~~tessellated terrain render~~
     - textured and nicely shaded
-- cubemap
+- sh
     - ~~render irradiance cubemap from a point~~
     - ~~debug view~~
     - cubemap to SH
-        - cs - solid angles
-        - cs - accumulates SH coefficient while sampling the cubemap
-    - render to six textures
-        - cs - process textures as cubemap faces
-            - solid angles
-            - accumulate SH coefficient
-    - debug SH (eval)
+    - sh to "cubemap"
+    - debug SH (eval, latlong)
     - irradiance volumes
 - prt
     - model loader
@@ -35,7 +28,8 @@ precomputed radiance transport
     - neighborhood transfer (soft shadows)
         - direct + self-shadow
     - radiance transfer volumes
-
-- dynamic
-    - dynamic scenes
-    - dynamic transfer functions
+    - dynamic
+        - dynamic scenes
+        - dynamic transfer functions
+- lpv
+    - ...
