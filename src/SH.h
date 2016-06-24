@@ -137,7 +137,7 @@ namespace aa
         struct SHPainter
         {
             GLuint vao, vbo, program;
-            GLint uloc_tex, uloc_res, uloc_dim;
+            GLint uloc_shc, uloc_res, uloc_dim;
 
             SHPainter();
             ~SHPainter();
@@ -145,6 +145,7 @@ namespace aa
             template<uint8_t bcnt>
             void draw(aa::sh::SH_t<bcnt> sh, glm::ivec2 pos, glm::uvec2 dim)
             {
+                assert(bcnt < 6);
                 glUseProgram(program);
 
                 glDisable(GL_CULL_FACE);
@@ -154,6 +155,23 @@ namespace aa
                 glGetIntegerv(GL_VIEWPORT, dims);
                 glUniform2f(uloc_res, dims[2], dims[3]);
                 glUniform4f(uloc_dim, (float)pos.x, (float)pos.y, (float)dim.x, (float)dim.y);
+                GLfloat shc_[75];
+                for (int i = 0; i < 25; i++)
+                {
+                    shc_[3 * i] = 0.0f;
+                    shc_[3 * i + 1] = 0.0f;
+                    shc_[3 * i + 2] = 0.0f;
+                }
+                shc_[0] = 0.967757057878229854f, shc_[1] = 0.976516067990363390, shc_[2] = 0.891218272348969998;
+                shc_[3] = -0.384163503608655643, shc_[4] = -0.423492289131209787, shc_[5] = -0.425532726148547868; /* Band 1 */
+                shc_[6] = 0.055906294587354334, shc_[7] = 0.056627436881069373, shc_[8] = 0.069969936396987467;
+                shc_[9] = 0.120985157386215209, shc_[10] = 0.119297994074027414, shc_[11] = 0.117111965829213599;
+                shc_[12] = -0.176711633774331106, shc_[13] = -0.170331404095516392, shc_[14] = -0.151345020570876621; /* Band 2 */
+                shc_[15] = -0.124682114349692147, shc_[16] = -0.119340785411183953, shc_[17] = -0.096300354204368860;
+                shc_[18] = 0.001852378550138503, shc_[19] = -0.032592784164597745, shc_[20] = -0.088204495001329680;
+                shc_[21] = 0.296365482782109446, shc_[22] = 0.281268696656263029, shc_[23] = 0.243328223888495510;
+                shc_[24] = -0.079826665303240341, shc_[25] = -0.109340956251195970, shc_[26] = -0.157208859664677764;
+                glUniform3fv(uloc_shc, 25, shc_);
 
                 glBindVertexArray(vao);
                 glDrawArrays(GL_TRIANGLES, 0, 6);

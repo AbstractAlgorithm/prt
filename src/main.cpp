@@ -123,6 +123,8 @@ void main()
     memcpy(koe, shcoeff, 25 * sizeof(double));
     delete[] shcoeff;
 
+    aa::sh::SH_t<5> lbdnss;
+
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
@@ -164,6 +166,8 @@ void main()
             //aa::render::DrawCubemapAsLatlong(testcm, 0, 368, 400, 200);
             //aa::render::DrawCubemapAsLatlong(imagecm, 0, 568, 400, 200);
             //aa::render::DrawTexturedQuad(testtex[5], 440, 280, 200, 200);
+
+            aa::sh::DrawLatlong(lbdnss, glm::ivec2(200, 10), glm::uvec2(200, 100));
             
             TwDraw();
         }
