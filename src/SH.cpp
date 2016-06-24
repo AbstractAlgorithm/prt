@@ -229,15 +229,15 @@ aa::sh::SHPainter::SHPainter()
                 sh[8] = k05*(nn.x*nn.x - nn.y*nn.y);
 
                 vec3 rgb = vec3(0.0);
-                rgb += uSH[0] * sh[0];// *1.0;
-                rgb += uSH[1] * sh[1];// * 2.0 / 2.5;
-                rgb += uSH[2] * sh[2];// * 2.0 / 2.5;
-                rgb += uSH[3] * sh[3];// * 2.0 / 2.5;
-                rgb += uSH[4] * sh[4];// * 1.0 / 2.5;
-                rgb += uSH[5] * sh[5];// * 0.5;
-                rgb += uSH[6] * sh[6];// * 0.5;
-                rgb += uSH[7] * sh[7];// * 0.5;
-                rgb += uSH[8] * sh[8];// * 0.5;
+                rgb += uSH[0] * sh[0];
+                rgb += uSH[1] * sh[1];
+                rgb += uSH[2] * sh[2];
+                rgb += uSH[3] * sh[3];
+                rgb += uSH[4] * sh[4];
+                rgb += uSH[5] * sh[5];
+                rgb += uSH[6] * sh[6];
+                rgb += uSH[7] * sh[7];
+                rgb += uSH[8] * sh[8];
                 return rgb;
             }
 
@@ -300,41 +300,41 @@ aa::sh::SHPainter::~SHPainter()
     program = 0;
 }
 
-double* aa::sh::blabla(float* data, uint8_t bands)
-{
-    double* coeff = new double[bands*bands];
-    for (int i = 0; i < bands*bands; coeff[i++] = 0.0);
-
-    for (uint8_t fi = 0; fi < 6; fi++)
-    {
-        // get color
-        float col = data[fi];
-        glm::vec3 dir;
-        switch (fi)
-        {
-        case 0: dir = glm::vec3(+1, 0, 0); break;
-        case 1: dir = glm::vec3(-1, 0, 0); break;
-        case 2: dir = glm::vec3(0, +1, 0); break;
-        case 3: dir = glm::vec3(0, -1, 0); break;
-        case 4: dir = glm::vec3(0, 0, +1); break;
-        case 5: dir = glm::vec3(0, 0, -1); break;
-        }
-        // solid angle
-        double sa = 2.0*PI / 3.0;
-        double phi = atan2(dir.y, dir.x);
-        double theta = acos(dir.z);
-
-        for (int32_t l = 0; l < bands; l++)
-        {
-            for (int32_t m = -l; m <= l; m++)
-            {
-                char i = l*(l + 1) + m;
-                double _sh = SH(l, m, theta, phi);
-                coeff[i] += _sh * sa * col;
-            }
-        }
-    }
-    for (int i = 0; i < bands*bands; coeff[i++] /= PI4);
-    return coeff;
-}
+//double* aa::sh::blabla(float* data, uint8_t bands)
+//{
+//    double* coeff = new double[bands*bands];
+//    for (int i = 0; i < bands*bands; coeff[i++] = 0.0);
+//
+//    for (uint8_t fi = 0; fi < 6; fi++)
+//    {
+//        // get color
+//        float col = data[fi];
+//        glm::vec3 dir;
+//        switch (fi)
+//        {
+//        case 0: dir = glm::vec3(+1, 0, 0); break;
+//        case 1: dir = glm::vec3(-1, 0, 0); break;
+//        case 2: dir = glm::vec3(0, +1, 0); break;
+//        case 3: dir = glm::vec3(0, -1, 0); break;
+//        case 4: dir = glm::vec3(0, 0, +1); break;
+//        case 5: dir = glm::vec3(0, 0, -1); break;
+//        }
+//        // solid angle
+//        double sa = 2.0*PI / 3.0;
+//        double phi = atan2(dir.y, dir.x);
+//        double theta = acos(dir.z);
+//
+//        for (int32_t l = 0; l < bands; l++)
+//        {
+//            for (int32_t m = -l; m <= l; m++)
+//            {
+//                char i = l*(l + 1) + m;
+//                double _sh = SH(l, m, theta, phi);
+//                coeff[i] += _sh * sa * col;
+//            }
+//        }
+//    }
+//    for (int i = 0; i < bands*bands; coeff[i++] /= PI4);
+//    return coeff;
+//}
 

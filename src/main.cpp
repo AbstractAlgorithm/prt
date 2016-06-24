@@ -15,7 +15,12 @@ struct
         glm::vec3 up(0, 1, 0);
         glm::vec3 target(0, 0, 0);
         glm::vec3 pos(cos(angle)*r*cos(yaw), sin(yaw)*r, sin(angle)*r*cos(yaw));
-        return glm::lookAt(pos, target, up);
+        glm::mat4 v = glm::lookAt(pos, target, up);
+        v[0][2] *= -1.0f;
+        v[1][2] *= -1.0f;
+        v[2][2] *= -1.0f;
+        v[3][2] *= -1.0f;
+        return v;
     }
 } camera;
 struct
@@ -27,7 +32,7 @@ GLuint cm, testcm, imagecm;
 GLuint testtex[6];
 RECT hrect;
 bool wireframe;
-const glm::ivec2 cmRes(256, 256);
+const glm::ivec2 cmRes(128,128);
 float cm_height;
 TwBar* uibar;
 
@@ -55,18 +60,12 @@ void DrawWorld(glm::mat4 v, glm::mat4 p)
 {
     static int i = 0;
     
-    if (i<2)        glClearColor(0.3f, 0.0f, 0.0f, 1.0f);
-    else if (i<4)   glClearColor(0.0f, 0.3f, 0.0f, 1.0f);
-    else            glClearColor(0.0f, 0.0f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
-    //aa::render::DrawTexturedQuad(testtex[i], 0, 0, cmRes.x, cmRes.y);
-    //aa::render::DrawLODTerrain(terrain.heightmap, terrain.m, v, p);
+    
     aa::render::RenderSkybox(imagecm, v, p);
-    i = (i + 1) % 6;
-    //RandomWorld();
-    //aa::render::DrawCubemapAsLatlong(imagecm, 0, 0, 200, 200);
+    aa::render::DrawLODTerrain(terrain.heightmap, terrain.m, v, p);
 }
 
 void main()
@@ -117,13 +116,27 @@ void main()
     //cm = aa::render::CreteTextureCubemap(filenames);
     cm = aa::render::CreateCubemapEmpty(cmRes);
 
-    const float data[6] = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
-    double* shcoeff = aa::sh::blabla((float*)data, 3);
-    double koe[25];
-    memcpy(koe, shcoeff, 25 * sizeof(double));
-    delete[] shcoeff;
+    const double vals[] = { 0.967757057878229854, 0.976516067990363390, 0.891218272348969998,
+        -0.384163503608655643, -0.423492289131209787, -0.425532726148547868,
+        0.055906294587354334, 0.056627436881069373, 0.069969936396987467,
+        0.120985157386215209, 0.119297994074027414, 0.117111965829213599,
+        -0.176711633774331106, -0.170331404095516392, -0.151345020570876621,
+        -0.124682114349692147, -0.119340785411183953, -0.096300354204368860,
+        0.001852378550138503, -0.032592784164597745, -0.088204495001329680,
+        0.296365482782109446, 0.281268696656263029, 0.243328223888495510,
+        -0.079826665303240341, -0.109340956251195970, -0.157208859664677764 };
+    aa::sh::SH_t<3> example_sh(vals);
 
-    aa::sh::SH_t<5> lbdnss;
+    const double gcc[] = {.79, .44, .54,
+    .39, .35, .60,
+    -.34, -.18, -.27,
+    -.29, -.06, .01,
+    -.11, -.05, -.12,
+    -.26, -.22, -.47,
+    -.16, -.09, -.15,
+    .56, .21, .14,
+    .21, -.05, -.30};
+    aa::sh::SH_t<3> grace_catedral_sh(gcc);
 
 
     glEnable(GL_DEPTH_TEST);
@@ -159,15 +172,18 @@ void main()
             glViewport(0, 0, hrect.right, hrect.bottom);
             glClearColor(54.0f / 255.0f, 122.0f / 255.0f, 165.0f / 255.0f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            //aa::render::DrawLODTerrain(terrain.heightmap, terrain.m, camera.v(), camera.p);
+            glDisable(GL_CULL_FACE);
+            glEnable(GL_DEPTH_TEST);
+            aa::render::DrawLODTerrain(terrain.heightmap, terrain.m, camera.v(), camera.p);
             aa::render::RenderSkybox(imagecm, camera.v(), camera.p);
             
             aa::render::DrawCubemapAsLatlong(cm, 880, 568, 400, 200);
+            aa::render::DrawCubemapProbe(imagecm, 680, 568,  200);
             //aa::render::DrawCubemapAsLatlong(testcm, 0, 368, 400, 200);
             //aa::render::DrawCubemapAsLatlong(imagecm, 0, 568, 400, 200);
             //aa::render::DrawTexturedQuad(testtex[5], 440, 280, 200, 200);
 
-            aa::sh::DrawLatlong(lbdnss, glm::ivec2(200, 10), glm::uvec2(200, 100));
+            aa::sh::DrawLatlong(grace_catedral_sh, glm::ivec2(480, 568), glm::uvec2(400, 200));
             
             TwDraw();
         }

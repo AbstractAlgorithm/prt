@@ -395,8 +395,8 @@ struct TerrainLOD
     {
         glUseProgram(program);
 
-        glDisable(GL_CULL_FACE);
-        //glCullFace(GL_BACK);
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_FRONT);
         RECT hrect;
         GetClientRect(aa::window::g_hWnd, &hrect);
         glUniform2f(uloc_ss, (float)hrect.right, (float)hrect.bottom);
@@ -576,6 +576,155 @@ void aa::render::DrawCubemapAsLatlong(GLuint cubemap, unsigned x, unsigned y, un
     cll.Draw(cubemap, x, y, width, height);
 }
 
+struct CubemapProbe
+{
+    GLuint vao, vbo, program;
+    GLint uloc_tex, uloc_res, uloc_dim;
+
+    CubemapProbe()
+    {
+        // init shaders
+        program = glCreateProgram();
+        {
+            GLuint vs = glCreateShader(GL_VERTEX_SHADER);
+            static const char* vs_shdr = GLSLify(330,
+                in vec2 iPos;
+            uniform vec2 uRes;
+            uniform vec4 uDim;
+            out vec2 uv;
+
+            void main()
+            {
+                vec2 sz = 2.0 * (uDim.zw / uRes);
+                vec2 disp = 2.0 * (uDim.xy / uRes);
+                vec2 p = iPos * 0.5 + vec2(0.5, 0.5);
+                p *= sz;
+                p += disp - vec2(1, 1);
+                gl_Position = vec4(p.x, -p.y, 0.5, 1.0);
+
+                uv = (iPos + vec2(1.0)) * 0.5;
+            }
+            );
+            glShaderSource(vs, 1, &vs_shdr, NULL);
+            glCompileShader(vs);
+            glAttachShader(program, vs);
+
+            GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
+            const char* fs_shdr = GLSLify(330,
+                /* Cubemap as latlong shader by:
+                Dario Manesku (https://github.com/dariomanesku) */
+                in vec2 uv;
+            uniform samplerCube uTex;
+            uniform vec4 uDim;
+            out vec4 fragColor;
+
+            void main()
+            {
+                vec2 p = uv*2.0 - vec2(1.0);
+                float aspect = uDim.z / uDim.w;
+                p.x *= aspect;
+                if (length(p) < 1.0)
+                {
+                    float theta = acos(p.x);
+                    float phi = acos(p.y);
+                    float sr = sin(phi);
+                    vec3 n;
+                    n.x = p.x;
+                    n.y = p.y;
+                    n.z = sqrt(sr*sr - p.x*p.x);
+                    n = normalize(n);
+
+                    vec3 camera = vec3(0.0, 0.0, 30.0);
+                    camera.y /= aspect;
+                    vec3 ray = n - camera;
+                    vec3 rRay = reflect(ray, n);
+                    fragColor = texture(uTex, rRay);
+                }
+
+                else
+                    discard;
+                /*vec3 dir = vecFromLatLong(uv);
+                fragColor = texture(uTex, dir);*/
+            }
+            );
+            glShaderSource(fs, 1, &fs_shdr, NULL);
+            glCompileShader(fs);
+            glAttachShader(program, fs);
+
+            glLinkProgram(program);
+            glDeleteShader(vs);
+            glDeleteShader(fs);
+            {
+                int infologLen = 0;
+                int charsWritten = 0;
+                GLchar *infoLog = NULL;
+                glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infologLen);
+                if (infologLen > 0)
+                {
+                    infoLog = (GLchar*)malloc(infologLen);
+                    if (infoLog == NULL)
+                        return;
+                    glGetProgramInfoLog(program, infologLen, &charsWritten, infoLog);
+                }
+                printf("%s", infoLog);
+                delete[] infoLog;
+            }
+        }
+        uloc_res = glGetUniformLocation(program, "uRes");
+        uloc_tex = glGetUniformLocation(program, "uTex");
+        uloc_dim = glGetUniformLocation(program, "uDim");
+
+        // init fs quad
+        glGenVertexArrays(1, &vao);
+        glGenBuffers(1, &vbo);
+
+        glBindVertexArray(vao);
+        GLfloat verts[12] = { -1, -1, 1, 1, -1, 1, -1, -1, 1, -1, 1, 1 };
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
+        glBindVertexArray(0);
+    }
+
+    void Draw(GLuint texture, unsigned x, unsigned y, unsigned dim)
+    {
+        glUseProgram(program);
+
+        glDisable(GL_CULL_FACE);
+        glDisable(GL_DEPTH_TEST);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
+        glUniform1i(uloc_tex, 0);
+        int dims[4];
+        glGetIntegerv(GL_VIEWPORT, dims);
+        glUniform2f(uloc_res, dims[2], dims[3]);
+        glUniform4f(uloc_dim, (float)x, (float)y, (float)dim, (float)dim);
+
+        glBindVertexArray(vao);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+    }
+
+    ~CubemapProbe()
+    {
+        glBindVertexArray(0);
+        glDeleteBuffers(1, &vbo);
+        glDeleteVertexArrays(1, &vao);
+        vbo = 0;
+        vao = 0;
+
+        glDeleteProgram(program);
+        program = 0;
+    }
+};
+
+void aa::render::DrawCubemapProbe(GLuint cubemap, unsigned x, unsigned y, unsigned dim)
+{
+    static CubemapProbe cmp;
+    cmp.Draw(cubemap, x, y, dim);
+}
+
 GLuint aa::render::CreateCubemapEmpty(glm::ivec2 res)
 {
     GLuint tex;
@@ -661,10 +810,6 @@ struct CubemapFiller
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, cubemap, 0);
             // setup camera
             v = glm::lookAt(position, position + targets[i], ups[i]);
-            /*v[0][2] *= -1.0f;
-            v[1][2] *= -1.0f;
-            v[2][2] *= -1.0f;
-            v[3][2] *= -1.0f;*/
             // draw
             (*drawWorldFunc)(v, p);
         }
