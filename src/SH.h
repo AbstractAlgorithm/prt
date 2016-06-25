@@ -49,8 +49,9 @@ namespace aa
 
         // --------------------------------------------=-=- cool functions -=-=-
 
-        void GenerateCoefficients(GLuint cubemap, unsigned size, SH_t& sh);
+        void GenerateCoefficientsFBO(int face, unsigned size, SH_t& sh);
         void DrawLatlong(SH_t sh, glm::ivec2 pos, glm::uvec2 dim);
+        void GenerateCoefficients(GLuint cubemap, unsigned size, SH_t& sh); // not done (CS version)
     }
 }
 

@@ -23,7 +23,7 @@ namespace aa
         GLuint CreteTextureCubemap(const char* filenames[6]);
         void DrawCubemapAsLatlong(GLuint cubemap, unsigned x, unsigned y, unsigned width, unsigned height);
         void DrawCubemapProbe(GLuint cubemap, unsigned x, unsigned y, unsigned dim);
-        void FillCubemap(GLuint cubemap, glm::ivec2 res, glm::vec3 position, void(*drawWorldFunc)(glm::mat4 v, glm::mat4 p));
+        void FillCubemap(GLuint cubemap, unsigned res, glm::vec3 position, void(*drawWorldFunc)(glm::mat4 v, glm::mat4 p), void(*callback)(unsigned, unsigned) = 0);
         void RenderSkybox(GLuint cubemap, glm::mat4 v, glm::mat4 p);
         
         void DrawLODTerrain(GLuint heightmap, glm::mat4 m, glm::mat4 v, glm::mat4 p);

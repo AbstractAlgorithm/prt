@@ -34,7 +34,7 @@ GLuint cm, testcm, imagecm;
 GLuint testtex[6];
 RECT hrect;
 bool wireframe;
-const glm::ivec2 cmRes(128,128);
+const unsigned cmRes = 128;
 float cm_height;
 TwBar* uibar;
 
@@ -68,6 +68,12 @@ void DrawWorld(glm::mat4 v, glm::mat4 p)
     
     render::RenderSkybox(imagecm, v, p);
     render::DrawLODTerrain(terrain.heightmap, terrain.m, v, p);
+}
+
+sh::SH_t mysh;
+void fillMySH(unsigned i, unsigned size)
+{
+    sh::GenerateCoefficientsFBO(i, size, mysh);
 }
 
 void main()
@@ -116,7 +122,7 @@ void main()
         testtex[i] = render::CreateTexture2D(filenames_test[i]);
 
     //cm = render::CreteTextureCubemap(filenames);
-    cm = render::CreateCubemapEmpty(cmRes);
+    cm = render::CreateCubemapEmpty(glm::ivec2(cmRes, cmRes));
 
     const double vals[] = {
         0.967757057878229854,   0.976516067990363390,   0.891218272348969998,
@@ -131,6 +137,10 @@ void main()
     };
     sh::SH_t example_sh;
     sh::make(example_sh, vals, 9*3);
+
+    sh::zero(mysh);
+    // fill cubemap
+    render::FillCubemap(cm, cmRes, glm::vec3(0.0f, cm_height, 0.0f), &DrawWorld, &fillMySH);
 
     const double gcc[] = {
         .79, .44, .54,
@@ -169,10 +179,6 @@ void main()
 
         // drawing
         {
-
-            // fill cubemap
-            render::FillCubemap(cm, cmRes, glm::vec3(0.0f, cm_height, 0.0f), &DrawWorld);
-
             // render
             if (wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
             else glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -186,11 +192,11 @@ void main()
             render::RenderSkybox(imagecm, camera.v(), camera.p);
             
             render::DrawCubemapAsLatlong(cm, 880, 568, 400, 200);
-            render::DrawCubemapProbe(imagecm, 680, 568,  200);
+            //render::DrawCubemapProbe(imagecm, 680, 568,  200);
             //render::DrawCubemapAsLatlong(testcm, 0, 368, 400, 200);
             //render::DrawCubemapAsLatlong(imagecm, 0, 568, 400, 200);
 
-            sh::DrawLatlong(grace_catedral_sh, glm::ivec2(480, 568), glm::uvec2(400, 200));
+            sh::DrawLatlong(mysh, glm::ivec2(480, 568), glm::uvec2(400, 200));
             
             TwDraw();
         }

@@ -106,6 +106,7 @@ struct TexturedQuad
             glDeleteShader(vs);
             glDeleteShader(fs);
             {
+                printf("Textured quad shader info:\n");
                 int infologLen = 0;
                 int charsWritten = 0;
                 GLchar *infoLog = NULL;
@@ -117,7 +118,7 @@ struct TexturedQuad
                         return;
                     glGetProgramInfoLog(program, infologLen, &charsWritten, infoLog);
                 }
-                printf("%s", infoLog);
+                printf("%s\n", infoLog);
                 delete[] infoLog;
             }
         }
@@ -326,6 +327,7 @@ struct TerrainLOD
             glDeleteShader(tes);
             glDeleteShader(fs);
             {
+                printf("Terrain tessellation shader info:\n");
                 int infologLen = 0;
                 int charsWritten = 0;
                 GLchar *infoLog = NULL;
@@ -337,7 +339,7 @@ struct TerrainLOD
                         return;
                     glGetProgramInfoLog(program, infologLen, &charsWritten, infoLog);
                 }
-                printf("%s", infoLog);
+                printf("%s\n", infoLog);
                 delete[] infoLog;
             }
         }
@@ -506,6 +508,7 @@ struct CubemapLatlong
             glDeleteShader(vs);
             glDeleteShader(fs);
             {
+                printf("Latlong cubemap shader info:\n");
                 int infologLen = 0;
                 int charsWritten = 0;
                 GLchar *infoLog = NULL;
@@ -517,7 +520,7 @@ struct CubemapLatlong
                         return;
                     glGetProgramInfoLog(program, infologLen, &charsWritten, infoLog);
                 }
-                printf("%s", infoLog);
+                printf("%s\n", infoLog);
                 delete[] infoLog;
             }
         }
@@ -655,6 +658,7 @@ struct CubemapProbe
             glDeleteShader(vs);
             glDeleteShader(fs);
             {
+                printf("Probe shader info:\n");
                 int infologLen = 0;
                 int charsWritten = 0;
                 GLchar *infoLog = NULL;
@@ -666,7 +670,7 @@ struct CubemapProbe
                         return;
                     glGetProgramInfoLog(program, infologLen, &charsWritten, infoLog);
                 }
-                printf("%s", infoLog);
+                printf("%s\n", infoLog);
                 delete[] infoLog;
             }
         }
@@ -747,7 +751,6 @@ struct CubemapFiller
 {
     GLuint fbo, rb;
     bool init;
-    glm::ivec2 rbres;
     CubemapFiller()
     {
         // fbo
@@ -763,15 +766,14 @@ struct CubemapFiller
         glDeleteRenderbuffers(1, &rb);
     }
 
-    void Draw(GLuint cubemap, glm::ivec2 res, glm::vec3 position, void(*drawWorldFunc)(glm::mat4 v, glm::mat4 p))
+    void Draw(GLuint cubemap, unsigned res, glm::vec3 position, void(*drawWorldFunc)(glm::mat4 v, glm::mat4 p), void(*callback)(unsigned, unsigned) = 0)
     {
         glBindFramebuffer(GL_FRAMEBUFFER, fbo);
         if (init == false /*|| (rbres.x!=res.x || rbres.y!=res.y)*/)
         {
             glBindRenderbuffer(GL_RENDERBUFFER, rb);
-            glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, res.x, res.y);
+            glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, res, res);
             glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rb);
-            rbres = res;
             init = true;
         }
         // camera
@@ -803,24 +805,27 @@ struct CubemapFiller
         };
 
         // render
-        for (int i = 0; i < 6; i++)
+        for (unsigned i = 0; i < 6; i++)
         {
-            glViewport(0, 0, res.x, res.y);
+            glViewport(0, 0, res, res);
             // setup target face
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, cubemap, 0);
             // setup camera
             v = glm::lookAt(position, position + targets[i], ups[i]);
             // draw
             (*drawWorldFunc)(v, p);
+
+            if (callback)
+                callback(i, res);
         }
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 };
 
-void aa::render::FillCubemap(GLuint cubemap, glm::ivec2 res, glm::vec3 position, void(*drawWorldFunc)(glm::mat4 v, glm::mat4 p))
+void aa::render::FillCubemap(GLuint cubemap, unsigned res, glm::vec3 position, void(*drawWorldFunc)(glm::mat4 v, glm::mat4 p), void(*callback)(unsigned,unsigned))
 {
     static CubemapFiller cmf;
-    cmf.Draw(cubemap, res, position, drawWorldFunc);
+    cmf.Draw(cubemap, res, position, drawWorldFunc, callback);
 }
 
 struct Skybox
@@ -874,6 +879,7 @@ struct Skybox
             glDeleteShader(vs);
             glDeleteShader(fs);
             {
+                printf("Skybox shader info:\n");
                 int infologLen = 0;
                 int charsWritten = 0;
                 GLchar *infoLog = NULL;
@@ -885,7 +891,7 @@ struct Skybox
                         return;
                     glGetProgramInfoLog(program, infologLen, &charsWritten, infoLog);
                 }
-                printf("%s", infoLog);
+                printf("%s\n", infoLog);
                 delete[] infoLog;
             }
         }

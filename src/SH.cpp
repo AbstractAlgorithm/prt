@@ -172,19 +172,55 @@ double Y(int l, int m, double theta, double phi)
 
 // ----------------------------------------------------=-=- cool functions -=-=-
 
-struct SHGenerator
+struct SHGeneratorCS
 {
     GLuint program;
 
-    SHGenerator()
+    SHGeneratorCS()
     {
         GLuint cs = glCreateShader(GL_COMPUTE_SHADER);
         static const char* shader_src = GLSLify(430,
             layout(local_size_x = 16, local_size_y = 16) in;
 
+            uniform float size;
+            uniform samplerCube uTex;
+
+            const vec3 topleft[6] = vec3[](
+                vec3(1, 1, -1),     // +x
+                vec3(-1, 1, 1),     // -x
+                vec3(1, 1, -1),     // +y
+                vec3(1, -1, 1),     // -y
+                vec3(1, 1, 1),      // +z
+                vec3(-1, 1, -1)     // -z
+            );
+
+            const vec3 bottomright[6] = vec3[](
+                vec3(1, -1, 1),     // +x
+                vec3(-1, -1, -1),   // -x
+                vec3(-1, 1, 1),     // +y
+                vec3(-1, -1, -1),   // -y
+                vec3(-1, -1, 1),    // +z
+                vec3(1, -1, -1)     // -z
+            );
+
             void main()
             {
+                if (gl_GlobalInvocationID.x < size && gl_GlobalInvocationID.y < size)
+                {
+                    vec2 uv;
+                    uv.x = gl_GlobalInvocationID.x / size;
+                    uv.y = gl_GlobalInvocationID.y / size;
 
+                    uint face = gl_NumWorkGroups.z;
+
+                    vec3 dir;
+                    dir.x = mix(topleft[face].x, bottomright[face].x, uv.x);
+                    dir.y = mix(topleft[face].y, bottomright[face].y, uv.y);
+                    dir.z = topleft[face].z;
+                    dir = normalize(dir);
+
+                    vec3 col = texture(uTex, dir).rgb;
+                }
             }
         );
         glShaderSource(cs, 1, &shader_src, NULL);
@@ -195,6 +231,10 @@ struct SHGenerator
         glLinkProgram(program);
         glDeleteShader(cs);
         {
+            printf("SH compute shader info:\n");
+            GLint sz[1];
+            glGetIntegerv(GL_MAX_COMPUTE_SHARED_MEMORY_SIZE,sz);
+            printf("%d\n", *sz);
             int infologLen = 0;
             int charsWritten = 0;
             GLchar *infoLog = NULL;
@@ -206,12 +246,12 @@ struct SHGenerator
                     return;
                 glGetProgramInfoLog(program, infologLen, &charsWritten, infoLog);
             }
-            printf("%s", infoLog);
+            printf("%s\n", infoLog);
             delete[] infoLog;
         }
     }
 
-    ~SHGenerator()
+    ~SHGeneratorCS()
     {
         glDeleteProgram(program);
         program = 0;
@@ -236,14 +276,156 @@ struct SHGenerator
         GL_MAP_WRITE_BIT |
         GL_MAP_INVALIDATE_BUFFER_BIT);
         }*/
-
+        glUseProgram(program);
+        // calc dims
+        glDispatchCompute(16, 16, 6);
     }
 };
 
 void aa::sh::GenerateCoefficients(GLuint cubemap, unsigned size, SH_t& sh)
 {
-    static SHGenerator shg;
+    // compute shader version
+    static SHGeneratorCS shg;
     shg.generate(cubemap, size, sh);
+}
+
+double areaElement(double x, double y)
+{
+    return atan2(x * y, sqrt(x * x + y * y + 1));
+}
+
+double cubemapTexelSolidAngle(unsigned res, double u, double v)
+{
+    double halfTexel = 0.5 / (double)res;
+    u = 2.0 * u - 1.0;
+    v = 2.0 * v - 1.0;
+
+    double x0 = u - halfTexel;
+    double y0 = v - halfTexel;
+    double x1 = u + halfTexel;
+    double y1 = v + halfTexel;
+    double solidAngle   = areaElement(x0, y0)
+                        - areaElement(x0, y1)
+                        - areaElement(x1, y0)
+                        + areaElement(x1, y1);
+    return solidAngle;
+}
+
+void evalSHBasis5(double* _shBasis, glm::vec3 _dir)
+{
+    const double x = double(_dir.x);
+    const double y = double(_dir.y);
+    const double z = double(_dir.z);
+
+    const double x2 = x*x;
+    const double y2 = y*y;
+    const double z2 = z*z;
+
+    const double z3 = pow(z, 3.0);
+
+    const double x4 = pow(x, 4.0);
+    const double y4 = pow(y, 4.0);
+    const double z4 = pow(z, 4.0);
+
+    //Equations based on data from: http://ppsloan.org/publications/StupidSH36.pdf
+    _shBasis[0] = 1.0 / (2.0*SQRT_PI);
+
+    _shBasis[1] = -sqrt(3.0 / PI4)*y;
+    _shBasis[2] = sqrt(3.0 / PI4)*z;
+    _shBasis[3] = -sqrt(3.0 / PI4)*x;
+
+    _shBasis[4] = sqrt(15.0 / PI4)*y*x;
+    _shBasis[5] = -sqrt(15.0 / PI4)*y*z;
+    _shBasis[6] = sqrt(5.0 / PI16)*(3.0*z2 - 1.0);
+    _shBasis[7] = -sqrt(15.0 / PI4)*x*z;
+    _shBasis[8] = sqrt(15.0 / PI16)*(x2 - y2);
+
+    _shBasis[9] = -sqrt(70.0 / PI64)*y*(3 * x2 - y2);
+    _shBasis[10] = sqrt(105.0 / PI4)*y*x*z;
+    _shBasis[11] = -sqrt(21.0 / PI16)*y*(-1.0 + 5.0*z2);
+    _shBasis[12] = sqrt(7.0 / PI16)*(5.0*z3 - 3.0*z);
+    _shBasis[13] = -sqrt(42.0 / PI64)*x*(-1.0 + 5.0*z2);
+    _shBasis[14] = sqrt(105.0 / PI16)*(x2 - y2)*z;
+    _shBasis[15] = -sqrt(70.0 / PI64)*x*(x2 - 3.0*y2);
+
+    _shBasis[16] = 3.0*sqrt(35.0 / PI16)*x*y*(x2 - y2);
+    _shBasis[17] = -3.0*sqrt(70.0 / PI64)*y*z*(3.0*x2 - y2);
+    _shBasis[18] = 3.0*sqrt(5.0 / PI16)*y*x*(-1.0 + 7.0*z2);
+    _shBasis[19] = -3.0*sqrt(10.0 / PI64)*y*z*(-3.0 + 7.0*z2);
+    _shBasis[20] = (105.0*z4 - 90.0*z2 + 9.0) / (16.0*SQRT_PI);
+    _shBasis[21] = -3.0*sqrt(10.0 / PI64)*x*z*(-3.0 + 7.0*z2);
+    _shBasis[22] = 3.0*sqrt(5.0 / PI64)*(x2 - y2)*(-1.0 + 7.0*z2);
+    _shBasis[23] = -3.0*sqrt(70.0 / PI64)*x*z*(x2 - 3.0*y2);
+    _shBasis[24] = 3.0*sqrt(35.0 / (4.0*PI64))*(x4 - 6.0*y2*x2 + y4);
+}
+
+void aa::sh::GenerateCoefficientsFBO(int face, unsigned size, aa::sh::SH_t& sh)
+{
+    const glm::vec3 topleft[6] = {
+        glm::vec3(1, 1, -1),     // +x
+        glm::vec3(-1, 1, 1),     // -x
+        glm::vec3(1, 1, -1),     // +y
+        glm::vec3(1, -1, 1),     // -y
+        glm::vec3(1, 1, 1),      // +z
+        glm::vec3(-1, 1, -1)     // -z
+    };
+
+    const glm::vec3 bottomright[6] = {
+        glm::vec3(1, -1, 1),     // +x
+        glm::vec3(-1, -1, -1),   // -x
+        glm::vec3(-1, 1, 1),     // +y
+        glm::vec3(-1, -1, -1),   // -y
+        glm::vec3(-1, -1, 1),    // +z
+        glm::vec3(1, -1, -1)     // -z
+    };
+
+    // mpa cubemap face (current fbo) to the user memory
+    byte* data = new byte[size*size * 3];
+    glReadPixels(0, 0, size, size, GL_RGB, GL_UNSIGNED_BYTE, data);
+
+    // for each texel on the cube map
+    double texel_coeffs[25];
+    for (int i = size - 1; i >= 0; i--)
+    {
+        for (int j = 0; j < size; j++)
+        {
+            // get color
+            uint8_t r = data[(i*size + j) * 3];
+            uint8_t g = data[(i*size + j) * 3 + 1];
+            uint8_t b = data[(i*size + j) * 3 + 2];
+
+            // calc uv
+            double halfTexel = 0.5 / (double)size;
+            float u = (double)j / (double)size + halfTexel;
+            float v = 1.0f - (float)i / (float)size + halfTexel;
+
+            // get dir
+            glm::vec3 dir;
+            dir.x = topleft[face].x * (1.0 - u) + bottomright[face].x * u;
+            dir.y = topleft[face].y * (1.0 - v) + bottomright[face].y *v;
+            dir.z = topleft[face].z;
+            dir = normalize(dir);
+
+            // get solid angle
+            double solidAngle = cubemapTexelSolidAngle(size, u, v);
+
+            // evaluate SH
+            evalSHBasis5(texel_coeffs, dir);
+
+            // add texel's contribution to total sh
+            for (uint8_t ii = 0; ii < 25; ++ii)
+            {
+                sh[0][ii] += r * texel_coeffs[ii] * solidAngle;
+                sh[1][ii] += g * texel_coeffs[ii] * solidAngle;
+                sh[2][ii] += b * texel_coeffs[ii] * solidAngle;
+            }
+        }
+    }
+
+    // conserve energy of total sh
+    aa::sh::div(sh, PI4);
+
+    delete[] data;
 }
 
 // -----------------------------------------------------------------------------
@@ -351,6 +533,7 @@ struct SHPainter
             glDeleteShader(vs);
             glDeleteShader(fs);
             {
+                printf("SH latlong shader info:\n");
                 int infologLen = 0;
                 int charsWritten = 0;
                 GLchar *infoLog = NULL;
@@ -362,7 +545,7 @@ struct SHPainter
                         return;
                     glGetProgramInfoLog(program, infologLen, &charsWritten, infoLog);
                 }
-                printf("%s", infoLog);
+                printf("%s\n", infoLog);
                 delete[] infoLog;
             }
         }
