@@ -296,7 +296,7 @@ double areaElement(double x, double y)
 
 double cubemapTexelSolidAngle(unsigned res, double u, double v)
 {
-    double halfTexel = 0.5 / (double)res;
+    double halfTexel = 1.0 / (double)res;
     u = 2.0 * u - 1.0;
     v = 2.0 * v - 1.0;
 
@@ -311,11 +311,11 @@ double cubemapTexelSolidAngle(unsigned res, double u, double v)
     return solidAngle;
 }
 
-void evalSHBasis5(double* _shBasis, glm::vec3 _dir)
+void evalSHBasis5(double* _shBasis, glm::dvec3 _dir)
 {
-    const double x = double(_dir.x);
-    const double y = double(_dir.y);
-    const double z = double(_dir.z);
+    const double x = _dir.x;
+    const double y = _dir.y;
+    const double z = _dir.z;
 
     const double x2 = x*x;
     const double y2 = y*y;
@@ -361,25 +361,7 @@ void evalSHBasis5(double* _shBasis, glm::vec3 _dir)
 
 void aa::sh::GenerateCoefficientsFBO(int face, unsigned size, aa::sh::SH_t& sh)
 {
-    const glm::vec3 topleft[6] = {
-        glm::vec3(1, 1, -1),     // +x
-        glm::vec3(-1, 1, 1),     // -x
-        glm::vec3(1, 1, -1),     // +y
-        glm::vec3(1, -1, 1),     // -y
-        glm::vec3(1, 1, 1),      // +z
-        glm::vec3(-1, 1, -1)     // -z
-    };
-
-    const glm::vec3 bottomright[6] = {
-        glm::vec3(1, -1, 1),     // +x
-        glm::vec3(-1, -1, -1),   // -x
-        glm::vec3(-1, 1, 1),     // +y
-        glm::vec3(-1, -1, -1),   // -y
-        glm::vec3(-1, -1, 1),    // +z
-        glm::vec3(1, -1, -1)     // -z
-    };
-
-    // mpa cubemap face (current fbo) to the user memory
+    // map cubemap face (current fbo) to the user memory
     byte* data = new byte[size*size * 3];
     glReadPixels(0, 0, size, size, GL_RGB, GL_UNSIGNED_BYTE, data);
 
@@ -396,15 +378,45 @@ void aa::sh::GenerateCoefficientsFBO(int face, unsigned size, aa::sh::SH_t& sh)
 
             // calc uv
             double halfTexel = 0.5 / (double)size;
-            float u = (double)j / (double)size + halfTexel;
-            float v = 1.0f - (float)i / (float)size + halfTexel;
+            double u = (double)j / (double)size + halfTexel;
+            double v = (double)(size-i) / (double)size + halfTexel;
 
             // get dir
-            glm::vec3 dir;
-            dir.x = topleft[face].x * (1.0 - u) + bottomright[face].x * u;
-            dir.y = topleft[face].y * (1.0 - v) + bottomright[face].y *v;
-            dir.z = topleft[face].z;
-            dir = normalize(dir);
+            glm::dvec3 dir;
+            switch (face)
+            {
+            case 0:
+                dir.x = 1.0;
+                dir.y = 1.0 - v * 2.0;
+                dir.z = -1.0 + u * 2.0;
+                break;
+            case 1:
+                dir.x = -1.0;
+                dir.y = 1.0 - v * 2.0;
+                dir.z = 1.0 - u * 2.0;
+                break;
+            case 2:
+                dir.x = 1.0 - u * 2.0;
+                dir.y = 1.0;
+                dir.z = -1.0 + v * 2.0;
+                break;
+            case 3:
+                dir.x = 1.0 - u * 2.0;
+                dir.y = -1.0;
+                dir.z = 1.0 - v * 2.0;
+                break;
+            case 4:
+                dir.x = 1.0 - u * 2.0;
+                dir.y = 1.0 - v * 2.0;
+                dir.z = 1.0;
+                break;
+            case 5:
+                dir.x = -1.0 + u * 2.0;
+                dir.y = 1.0 - v * 2.0;
+                dir.z = -1.0;
+                break;
+            }
+            dir = glm::normalize(dir);
 
             // get solid angle
             double solidAngle = cubemapTexelSolidAngle(size, u, v);
@@ -493,7 +505,6 @@ struct SHPainter
                 vec3 evalSH(vec3 _dir)
                 {
                     vec3 nn = normalize(_dir);
-                    nn = nn.xyz;
 
                     float sh[9];
                     sh[0] = k01;

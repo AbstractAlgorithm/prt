@@ -34,7 +34,7 @@ GLuint cm, testcm, imagecm;
 GLuint testtex[6];
 RECT hrect;
 bool wireframe;
-const unsigned cmRes = 128;
+const unsigned cmRes = 32;
 float cm_height;
 TwBar* uibar;
 
@@ -138,6 +138,10 @@ void main()
     };
     sh::SH_t example_sh;
     sh::make(example_sh, vals, 9*3);
+    sh::zero(example_sh);
+    example_sh[0][2] = 4.0;
+    example_sh[1][2] = 4.0;
+    example_sh[2][2] = 4.0;
 
     sh::zero(mysh);
     // fill cubemap
@@ -189,7 +193,7 @@ void main()
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glDisable(GL_CULL_FACE);
             glEnable(GL_DEPTH_TEST);
-            render::DrawLODTerrain(terrain.heightmap, terrain.m, camera.v(), camera.p);
+            //render::DrawLODTerrain(terrain.heightmap, terrain.m, camera.v(), camera.p);
             render::RenderSkybox(imagecm, camera.v(), camera.p);
             
             render::DrawCubemapAsLatlong(cm, 880, 568, 400, 200);
@@ -198,6 +202,7 @@ void main()
             //render::DrawCubemapAsLatlong(imagecm, 0, 568, 400, 200);
 
             sh::DrawLatlong(mysh, glm::ivec2(480, 568), glm::uvec2(400, 200));
+            sh::DrawLatlong(example_sh, glm::ivec2(80, 568), glm::uvec2(400, 200));
             
             TwDraw();
         }
