@@ -493,6 +493,7 @@ struct SHPainter
                 vec3 evalSH(vec3 _dir)
                 {
                     vec3 nn = normalize(_dir);
+                    nn = nn.xyz;
 
                     float sh[9];
                     sh[0] = k01;
@@ -592,7 +593,10 @@ struct SHPainter
         GLfloat shc_[27];
         for (int i = 0; i < 27; i++)
         {
-            shc_[i] = (float)(sh[i%3][i/3]);
+            int channel = i % 3;
+            int ml = i / 3;
+            double val = sh[channel][ml];
+            shc_[i] = (float)val;
         }
         glUniform3fv(uloc_shc, 9, shc_);
 
