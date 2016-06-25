@@ -3,6 +3,8 @@
 #include <cmath>
 #include "SH.h"
 
+using namespace aa;
+
 struct
 {
     glm::mat4 p;
@@ -64,8 +66,8 @@ void DrawWorld(glm::mat4 v, glm::mat4 p)
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
     
-    aa::render::RenderSkybox(imagecm, v, p);
-    aa::render::DrawLODTerrain(terrain.heightmap, terrain.m, v, p);
+    render::RenderSkybox(imagecm, v, p);
+    render::DrawLODTerrain(terrain.heightmap, terrain.m, v, p);
 }
 
 void main()
@@ -75,7 +77,7 @@ void main()
     TwInit(TW_OPENGL, NULL);
     
     glClearColor(54.0f / 255.0f, 122.0f / 255.0f, 165.0f / 255.0f, 1.0f);
-    GetClientRect(aa::window::g_hWnd, &hrect);
+    GetClientRect(window::g_hWnd, &hrect);
     camera.angle = 0.0f;
     camera.yaw = 0.0f;
     camera.r = 1.0f;
@@ -84,7 +86,7 @@ void main()
     terrain.m = glm::mat4(1.0f);
     terrain.m = glm::translate(terrain.m, glm::vec3(-0.5f, 0.0f, -0.5f));
     wireframe = false;
-    terrain.heightmap = aa::render::CreateTexture2D("src/images/terrain1.bmp");
+    terrain.heightmap = render::CreateTexture2D("src/images/terrain1.bmp");
     cm_height = 0.6f;
 
     uibar = TwNewBar("PRT");
@@ -99,7 +101,7 @@ void main()
         "src/images/top.bmp",
         "src/images/back.bmp",
         "src/images/front.bmp" };
-    imagecm = aa::render::CreteTextureCubemap(filenames);
+    imagecm = render::CreteTextureCubemap(filenames);
 
     const char* filenames_test[6] = {
         "src/images/posx.bmp",
@@ -108,62 +110,68 @@ void main()
         "src/images/negy.bmp",
         "src/images/posz.bmp",
         "src/images/negz.bmp" };
-    testcm = aa::render::CreteTextureCubemap(filenames_test);
+    testcm = render::CreteTextureCubemap(filenames_test);
 
     for (int i = 0; i < 6; i++)
-        testtex[i] = aa::render::CreateTexture2D(filenames_test[i]);
+        testtex[i] = render::CreateTexture2D(filenames_test[i]);
 
-    //cm = aa::render::CreteTextureCubemap(filenames);
-    cm = aa::render::CreateCubemapEmpty(cmRes);
+    //cm = render::CreteTextureCubemap(filenames);
+    cm = render::CreateCubemapEmpty(cmRes);
 
-    const double vals[] = { 0.967757057878229854, 0.976516067990363390, 0.891218272348969998,
-        -0.384163503608655643, -0.423492289131209787, -0.425532726148547868,
-        0.055906294587354334, 0.056627436881069373, 0.069969936396987467,
-        0.120985157386215209, 0.119297994074027414, 0.117111965829213599,
-        -0.176711633774331106, -0.170331404095516392, -0.151345020570876621,
-        -0.124682114349692147, -0.119340785411183953, -0.096300354204368860,
-        0.001852378550138503, -0.032592784164597745, -0.088204495001329680,
-        0.296365482782109446, 0.281268696656263029, 0.243328223888495510,
-        -0.079826665303240341, -0.109340956251195970, -0.157208859664677764 };
-    aa::sh::SH_t<3> example_sh(vals);
+    const double vals[] = {
+        0.967757057878229854,   0.976516067990363390,   0.891218272348969998,
+        -0.384163503608655643,  -0.423492289131209787,  -0.425532726148547868,
+        0.055906294587354334,   0.056627436881069373,   0.069969936396987467,
+        0.120985157386215209,   0.119297994074027414,   0.117111965829213599,
+        -0.176711633774331106,  -0.170331404095516392,  -0.151345020570876621,
+        -0.124682114349692147,  -0.119340785411183953,  -0.096300354204368860,
+        0.001852378550138503,   -0.032592784164597745,  -0.088204495001329680,
+        0.296365482782109446,   0.281268696656263029,   0.243328223888495510,
+        -0.079826665303240341,  -0.109340956251195970,  -0.157208859664677764
+    };
+    sh::SH_t example_sh;
+    sh::make(example_sh, vals, 9*3);
 
-    const double gcc[] = {.79, .44, .54,
-    .39, .35, .60,
-    -.34, -.18, -.27,
-    -.29, -.06, .01,
-    -.11, -.05, -.12,
-    -.26, -.22, -.47,
-    -.16, -.09, -.15,
-    .56, .21, .14,
-    .21, -.05, -.30};
-    aa::sh::SH_t<3> grace_catedral_sh(gcc);
+    const double gcc[] = {
+        .79, .44, .54,
+        .39, .35, .60,
+        -.34, -.18, -.27,
+        -.29, -.06, .01,
+        -.11, -.05, -.12,
+        -.26, -.22, -.47,
+        -.16, -.09, -.15,
+        .56, .21, .14,
+        .21, -.05, -.30
+    };
+    sh::SH_t grace_catedral_sh;
+    sh::make(grace_catedral_sh, vals, 9 * 3);
 
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
 
     // loop
-    while (!aa::window::windowShouldClose())
+    while (!window::windowShouldClose())
     {
         // input
         {
-            aa::input::Process();
+            input::Process();
             // move camera left-right
-            if (aa::input::keys[aa::input::LEFT])   camera.angle += 0.01f;
-            if (aa::input::keys[aa::input::RIGHT])  camera.angle -= 0.01f;
+            if (input::keys[input::LEFT])   camera.angle += 0.01f;
+            if (input::keys[input::RIGHT])  camera.angle -= 0.01f;
             // move camera up-down
-            if (aa::input::keys[aa::input::UP])     camera.yaw += 0.01f;
-            if (aa::input::keys[aa::input::DOWN])   camera.yaw -= 0.01f;
+            if (input::keys[input::UP])     camera.yaw += 0.01f;
+            if (input::keys[input::DOWN])   camera.yaw -= 0.01f;
             // zoom in-out
-            if (aa::input::keys[aa::input::Q])      camera.r -= 0.01f;
-            if (aa::input::keys[aa::input::E])      camera.r += 0.01f;
+            if (input::keys[input::Q])      camera.r -= 0.01f;
+            if (input::keys[input::E])      camera.r += 0.01f;
         }
 
         // drawing
         {
 
             // fill cubemap
-            aa::render::FillCubemap(cm, cmRes, glm::vec3(0.0f, cm_height, 0.0f), &DrawWorld);
+            render::FillCubemap(cm, cmRes, glm::vec3(0.0f, cm_height, 0.0f), &DrawWorld);
 
             // render
             if (wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -174,21 +182,20 @@ void main()
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glDisable(GL_CULL_FACE);
             glEnable(GL_DEPTH_TEST);
-            aa::render::DrawLODTerrain(terrain.heightmap, terrain.m, camera.v(), camera.p);
-            aa::render::RenderSkybox(imagecm, camera.v(), camera.p);
+            render::DrawLODTerrain(terrain.heightmap, terrain.m, camera.v(), camera.p);
+            render::RenderSkybox(imagecm, camera.v(), camera.p);
             
-            aa::render::DrawCubemapAsLatlong(cm, 880, 568, 400, 200);
-            aa::render::DrawCubemapProbe(imagecm, 680, 568,  200);
-            //aa::render::DrawCubemapAsLatlong(testcm, 0, 368, 400, 200);
-            //aa::render::DrawCubemapAsLatlong(imagecm, 0, 568, 400, 200);
-            //aa::render::DrawTexturedQuad(testtex[5], 440, 280, 200, 200);
+            render::DrawCubemapAsLatlong(cm, 880, 568, 400, 200);
+            render::DrawCubemapProbe(imagecm, 680, 568,  200);
+            //render::DrawCubemapAsLatlong(testcm, 0, 368, 400, 200);
+            //render::DrawCubemapAsLatlong(imagecm, 0, 568, 400, 200);
 
-            aa::sh::DrawLatlong(grace_catedral_sh, glm::ivec2(480, 568), glm::uvec2(400, 200));
+            sh::DrawLatlong(grace_catedral_sh, glm::ivec2(480, 568), glm::uvec2(400, 200));
             
             TwDraw();
         }
 
-        aa::window::SwapBuffersBackend();
+        window::SwapBuffersBackend();
     }
 
     // cleanup

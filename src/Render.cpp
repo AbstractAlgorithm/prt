@@ -395,8 +395,8 @@ struct TerrainLOD
     {
         glUseProgram(program);
 
-        glEnable(GL_CULL_FACE);
-        glCullFace(GL_FRONT);
+        glDisable(GL_CULL_FACE);
+        //glCullFace(GL_FRONT);
         RECT hrect;
         GetClientRect(aa::window::g_hWnd, &hrect);
         glUniform2f(uloc_ss, (float)hrect.right, (float)hrect.bottom);
@@ -409,7 +409,7 @@ struct TerrainLOD
 
         glBindVertexArray(vao);
         glDrawArrays(GL_PATCHES, 0, patchCount*patchCount * 4);
-        glDisable(GL_CULL_FACE);
+        //glDisable(GL_CULL_FACE);
     }
 };
 
