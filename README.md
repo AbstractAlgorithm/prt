@@ -6,12 +6,12 @@ precomputed radiance transport
 - ~~scene~~
     - ~~tessellated terrain render~~
     - textured and nicely shaded
-- sh
+- ~~sh~~
     - ~~render irradiance cubemap from a point~~
     - ~~debug view~~
-    - cubemap to SH
-    - sh to "cubemap"
-    - debug SH (eval, latlong)
+    - ~~cubemap to SH~~
+    - ~~sh to "cubemap"~~
+    - ~~debug SH (eval, latlong)~~
     - irradiance volumes
 - prt
     - model loader
