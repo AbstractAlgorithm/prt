@@ -180,7 +180,7 @@ void aa::render::DrawTexturedQuad(GLuint texture, unsigned x, unsigned y, unsign
 struct TerrainLOD
 {
     GLuint program, vao, vbo;
-    GLuint uloc_heightmap, uloc_m, uloc_v, uloc_p, uloc_ss;
+    GLint uloc_heightmap, uloc_m, uloc_v, uloc_p, uloc_ss;
     static const char patchCount = 64;
 
     TerrainLOD()
