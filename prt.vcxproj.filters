@@ -41,7 +41,7 @@
     <ClInclude Include="src\SH.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Tpt.h">
+    <ClInclude Include="src\Teapot.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

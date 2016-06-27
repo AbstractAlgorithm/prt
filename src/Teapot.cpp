@@ -1,4 +1,4 @@
-#include "Tpt.h"
+#include "Teapot.h"
 
 const int numVertices = 8728;
 const float position[][3] = { .00614747f, .112646f, .000855003f, .00620288f, .112646f, 0, 0, .112867f, 0, .010188f, .112021f, .00141695f, .0102798f, .112021f, 0, .0124515f, .111051f, .00173172f, .0125637f, .111051f, 0,
@@ -5829,8 +5829,8 @@ struct Teapot
 
                 void main()
                 {
-                    fragColor = vec4(normal, 1.0);
-            }
+                    fragColor = vec4(normal, 1.0)
+                }
             );
             glShaderSource(fs, 1, &fs_shdr, NULL);
             glCompileShader(fs);
@@ -5889,7 +5889,7 @@ struct Teapot
     }
 };
 
-void aa::teapot::Draw(glm::mat4 m, glm::mat4 v, glm::mat4 p)
+void aa::teapot::Draw2(glm::mat4 m, glm::mat4 v, glm::mat4 p)
 {
     static Teapot t;
     t.Draw(m, v, p);

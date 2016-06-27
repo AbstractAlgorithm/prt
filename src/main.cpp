@@ -2,7 +2,7 @@
 #include "Render.h"
 #include <cmath>
 #include "SH.h"
-#include "Tpt.h"
+#include "Teapot.h"
 
 using namespace aa;
 
@@ -183,7 +183,7 @@ void main()
             //render::DrawLODTerrain(terrain.heightmap, terrain.m, camera.v(), camera.p);
             render::RenderSkybox(imagecm, camera.v(), camera.p);
 
-            teapot::Draw(tm, camera.v(), camera.p);
+            teapot::Draw2(tm, camera.v(), camera.p);
 
             //sh::DrawLatlong(grace_catedral_sh, glm::ivec2(80, 568), glm::uvec2(400, 200));
             

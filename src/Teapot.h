@@ -14,7 +14,7 @@ namespace aa
 {
     namespace teapot
     {
-        void Draw(glm::mat4 m, glm::mat4 v, glm::mat4 p);
+        void Draw2(glm::mat4 m, glm::mat4 v, glm::mat4 p);
     }
 }
 
