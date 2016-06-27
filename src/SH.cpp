@@ -793,7 +793,7 @@ struct SHProbe
             glDeleteShader(vs);
             glDeleteShader(fs);
             {
-                printf("Probe shader info:\n");
+                printf("SH probe shader info:\n");
                 int infologLen = 0;
                 int charsWritten = 0;
                 GLchar *infoLog = NULL;
