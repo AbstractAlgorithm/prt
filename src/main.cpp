@@ -2,7 +2,7 @@
 #include "Render.h"
 #include <cmath>
 #include "SH.h"
-#include "teapot.h"
+#include "Teapot.h"
 
 using namespace aa;
 
@@ -56,7 +56,7 @@ struct
     {
         glm::vec3 up(0, 1, 0);
         glm::vec3 target(0, 0, 0);
-        glm::vec3 pos(cos(angle)*r*cos(yaw), sin(yaw)*r, sin(angle)*r*cos(yaw));
+        glm::vec3 pos(sin(angle)*r*cos(yaw), sin(yaw)*r, cos(angle)*r*cos(yaw));
         glm::mat4 v = glm::lookAt(pos, target, up);
         v[0][2] *= -1.0f;
         v[1][2] *= -1.0f;
@@ -78,134 +78,6 @@ const unsigned cmRes = 256;
 float cm_height;
 TwBar* uibar;
 
-namespace Teapot
-{
-    struct
-    {
-        GLuint vao, vbo_pos, vbo_nor, vbo_uv, ibo;
-        GLint uloc_m, uloc_v, uloc_p;
-        GLuint program;
-        glm::mat4 modelMat;
-    } obj;
-
-    void Init()
-    {
-        glGenVertexArrays(1, &obj.vao);
-        glBindVertexArray(obj.vao);
-
-        // pos
-        glGenBuffers(1, &obj.vbo_pos);
-        glBindBuffer(GL_ARRAY_BUFFER, obj.vbo_pos);
-        glBufferData(GL_ARRAY_BUFFER, numVertices * 3 * sizeof(float), position, GL_STATIC_DRAW);
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-        // nor
-        glGenBuffers(1, &obj.vbo_nor);
-        glBindBuffer(GL_ARRAY_BUFFER, obj.vbo_nor);
-        glBufferData(GL_ARRAY_BUFFER, numVertices * 3 * sizeof(float), normal, GL_STATIC_DRAW);
-        glEnableVertexAttribArray(1);
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-        // indices
-        glGenBuffers(1, &obj.ibo);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, obj.ibo);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, numIndices * sizeof(int), index, GL_STATIC_DRAW);
-
-        glBindVertexArray(0);
-
-        // shader
-        GLuint program = glCreateProgram();
-        {
-            GLuint vs = glCreateShader(GL_VERTEX_SHADER);
-            static const char* vs_shdr = GLSLify(330,
-                in vec3 iPos;
-            in vec3 iNormal;
-            uniform mat4 uModelMat;
-            uniform mat4 uViewMat;
-            uniform mat4 uProjMat;
-            out vec3 normal;
-
-            void main()
-            {
-                gl_Position = uProjMat * uViewMat * uModelMat *vec4(iPos, 1.0);
-                normal = iNormal;
-            }
-            );
-            glShaderSource(vs, 1, &vs_shdr, NULL);
-            glCompileShader(vs);
-            glAttachShader(program, vs);
-
-            GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
-            const char* fs_shdr = GLSLify(330,
-                out vec4 fragColor;
-            in vec3 normal;
-
-            void main()
-            {
-                fragColor = vec4(normal, 1.0);
-            }
-            );
-            glShaderSource(fs, 1, &fs_shdr, NULL);
-            glCompileShader(fs);
-            glAttachShader(program, fs);
-
-            glLinkProgram(program);
-            glDeleteShader(vs);
-            glDeleteShader(fs);
-            {
-                printf("Teapot shader info:\n");
-                int infologLen = 0;
-                int charsWritten = 0;
-                GLchar *infoLog = NULL;
-                glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infologLen);
-                if (infologLen > 0)
-                {
-                    infoLog = (GLchar*)malloc(infologLen);
-                    if (infoLog == NULL)
-                        return;
-                    glGetProgramInfoLog(program, infologLen, &charsWritten, infoLog);
-                }
-                printf("%s\n", infoLog);
-                delete[] infoLog;
-            }
-        }
-        obj.uloc_m = glGetUniformLocation(program, "uModelMat");
-        obj.uloc_v = glGetUniformLocation(program, "uViewMat");
-        obj.uloc_p = glGetUniformLocation(program, "uProjMat");
-        obj.program = program;
-    }
-    void Draw(glm::mat4 v, glm::mat4 p)
-    {
-        glUseProgram(obj.program);
-
-        glUniformMatrix4fv(obj.uloc_m, 1, GL_FALSE, glm::value_ptr(obj.modelMat));
-        glUniformMatrix4fv(obj.uloc_v, 1, GL_FALSE, glm::value_ptr(v));
-        glUniformMatrix4fv(obj.uloc_p, 1, GL_FALSE, glm::value_ptr(p));
-
-        glBindVertexArray(obj.vao);
-        glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_INT, 0);
-    }
-    void Destroy()
-    {
-        glBindVertexArray(0);
-        glDeleteBuffers(1, &obj.vbo_pos);
-        glDeleteBuffers(1, &obj.ibo);
-        glDeleteBuffers(1, &obj.vbo_nor);
-        glDeleteVertexArrays(1, &obj.vao);
-        obj.vbo_pos = 0;
-        obj.vbo_nor = 0;
-        obj.ibo = 0;
-        obj.vao = 0;
-
-        glDeleteProgram(obj.program);
-        obj.program = 0;
-    }
-}
-
-
-
-
 void DrawWorld(glm::mat4 v, glm::mat4 p)
 {
     static int i = 0;
@@ -222,7 +94,7 @@ void DrawWorld(glm::mat4 v, glm::mat4 p)
 
     render::RenderSkybox(imagecm, v, p);
     //render::DrawTexturedQuad(testtex[i], 0, 0, cmRes, cmRes);
-    render::DrawLODTerrain(terrain.heightmap, terrain.m, v, p);
+    //::DrawLODTerrain(terrain.heightmap, terrain.m, v, p);
 
     i = (i + 1) % 6;
 }
@@ -275,8 +147,8 @@ void main()
     sh::zero(grace_catedral_sh);
     sh::make(grace_catedral_sh, shc_grace_cathedral, 9 * 3);
 
-    Teapot::Init();
-    Teapot::obj.modelMat = glm::scale(Teapot::obj.modelMat, glm::vec3(2, 2, 2));
+    glm::mat4 tm;
+    tm = glm::scale(tm, glm::vec3(2, 2, 2));
 
     // loop
     while (!window::windowShouldClose())
@@ -308,10 +180,10 @@ void main()
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glDisable(GL_CULL_FACE);
             glEnable(GL_DEPTH_TEST);
-            render::DrawLODTerrain(terrain.heightmap, terrain.m, camera.v(), camera.p);
+            //render::DrawLODTerrain(terrain.heightmap, terrain.m, camera.v(), camera.p);
             render::RenderSkybox(imagecm, camera.v(), camera.p);
 
-            Teapot::Draw(camera.v(), camera.p);
+            teapot::Draw(tm, camera.v(), camera.p);
 
             //sh::DrawLatlong(grace_catedral_sh, glm::ivec2(80, 568), glm::uvec2(400, 200));
             
@@ -329,7 +201,6 @@ void main()
     }
 
     // cleanup
-    Teapot::Destroy();
     glDeleteTextures(1, &terrain.heightmap);
     glDeleteTextures(1, &testcm);
     glDeleteTextures(1, &imagecm);
