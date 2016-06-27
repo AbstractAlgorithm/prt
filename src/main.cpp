@@ -2,7 +2,7 @@
 #include "Render.h"
 #include <cmath>
 #include "SH.h"
-#include "Teapot.h"
+#include "Tpt.h"
 
 using namespace aa;
 

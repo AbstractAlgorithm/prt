@@ -1,4 +1,4 @@
-#include "Teapot.h"
+#include "Tpt.h"
 
 const int numVertices = 8728;
 const float position[][3] = { .00614747f, .112646f, .000855003f, .00620288f, .112646f, 0, 0, .112867f, 0, .010188f, .112021f, .00141695f, .0102798f, .112021f, 0, .0124515f, .111051f, .00173172f, .0125637f, .111051f, 0,
@@ -5776,26 +5776,26 @@ struct Teapot
 
     Teapot()
     {
-        glGenVertexArrays(1, &obj.vao);
-        glBindVertexArray(obj.vao);
+        glGenVertexArrays(1, &vao);
+        glBindVertexArray(vao);
 
         // pos
-        glGenBuffers(1, &obj.vbo_pos);
-        glBindBuffer(GL_ARRAY_BUFFER, obj.vbo_pos);
+        glGenBuffers(1, &vbo_pos);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo_pos);
         glBufferData(GL_ARRAY_BUFFER, numVertices * 3 * sizeof(float), position, GL_STATIC_DRAW);
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
         // nor
-        glGenBuffers(1, &obj.vbo_nor);
-        glBindBuffer(GL_ARRAY_BUFFER, obj.vbo_nor);
+        glGenBuffers(1, &vbo_nor);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo_nor);
         glBufferData(GL_ARRAY_BUFFER, numVertices * 3 * sizeof(float), normal, GL_STATIC_DRAW);
         glEnableVertexAttribArray(1);
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
         // indices
-        glGenBuffers(1, &obj.ibo);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, obj.ibo);
+        glGenBuffers(1, &ibo);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, numIndices * sizeof(int), index, GL_STATIC_DRAW);
 
         glBindVertexArray(0);
@@ -5806,17 +5806,17 @@ struct Teapot
             GLuint vs = glCreateShader(GL_VERTEX_SHADER);
             static const char* vs_shdr = GLSLify(330,
                 in vec3 iPos;
-            in vec3 iNormal;
-            uniform mat4 uModelMat;
-            uniform mat4 uViewMat;
-            uniform mat4 uProjMat;
-            out vec3 normal;
+                in vec3 iNormal;
+                uniform mat4 uModelMat;
+                uniform mat4 uViewMat;
+                uniform mat4 uProjMat;
+                out vec3 normal;
 
-            void main()
-            {
-                gl_Position = uProjMat * uViewMat * uModelMat *vec4(iPos, 1.0);
-                normal = iNormal;
-            }
+                void main()
+                {
+                    gl_Position = uProjMat * uViewMat * uModelMat *vec4(iPos, 1.0);
+                    normal = iNormal;
+                }
             );
             glShaderSource(vs, 1, &vs_shdr, NULL);
             glCompileShader(vs);
@@ -5825,11 +5825,11 @@ struct Teapot
             GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
             const char* fs_shdr = GLSLify(330,
                 out vec4 fragColor;
-            in vec3 normal;
+                in vec3 normal;
 
-            void main()
-            {
-                fragColor = vec4(normal, 1.0);
+                void main()
+                {
+                    fragColor = vec4(normal, 1.0);
             }
             );
             glShaderSource(fs, 1, &fs_shdr, NULL);
@@ -5856,36 +5856,36 @@ struct Teapot
                 delete[] infoLog;
             }
         }
-        obj.uloc_m = glGetUniformLocation(program, "uModelMat");
-        obj.uloc_v = glGetUniformLocation(program, "uViewMat");
-        obj.uloc_p = glGetUniformLocation(program, "uProjMat");
-        obj.program = program;
+        uloc_m = glGetUniformLocation(program, "uModelMat");
+        uloc_v = glGetUniformLocation(program, "uViewMat");
+        uloc_p = glGetUniformLocation(program, "uProjMat");
+        program = program;
     }
     void Draw(glm::mat4 m, glm::mat4 v, glm::mat4 p)
     {
-        glUseProgram(obj.program);
+        glUseProgram(program);
 
-        glUniformMatrix4fv(obj.uloc_m, 1, GL_FALSE, glm::value_ptr(m));
-        glUniformMatrix4fv(obj.uloc_v, 1, GL_FALSE, glm::value_ptr(v));
-        glUniformMatrix4fv(obj.uloc_p, 1, GL_FALSE, glm::value_ptr(p));
+        glUniformMatrix4fv(uloc_m, 1, GL_FALSE, glm::value_ptr(m));
+        glUniformMatrix4fv(uloc_v, 1, GL_FALSE, glm::value_ptr(v));
+        glUniformMatrix4fv(uloc_p, 1, GL_FALSE, glm::value_ptr(p));
 
-        glBindVertexArray(obj.vao);
+        glBindVertexArray(vao);
         glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_INT, 0);
     }
     ~Teapot()
     {
         glBindVertexArray(0);
-        glDeleteBuffers(1, &obj.vbo_pos);
-        glDeleteBuffers(1, &obj.ibo);
-        glDeleteBuffers(1, &obj.vbo_nor);
-        glDeleteVertexArrays(1, &obj.vao);
-        obj.vbo_pos = 0;
-        obj.vbo_nor = 0;
-        obj.ibo = 0;
-        obj.vao = 0;
+        glDeleteBuffers(1, &vbo_pos);
+        glDeleteBuffers(1, &ibo);
+        glDeleteBuffers(1, &vbo_nor);
+        glDeleteVertexArrays(1, &vao);
+        vbo_pos = 0;
+        vbo_nor = 0;
+        ibo = 0;
+        vao = 0;
 
-        glDeleteProgram(obj.program);
-        obj.program = 0;
+        glDeleteProgram(program);
+        program = 0;
     }
 };
 

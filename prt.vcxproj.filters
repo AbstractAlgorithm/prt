@@ -27,6 +27,9 @@
     <ClCompile Include="src\SH.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\Teapot.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\WinEntry.h">
@@ -38,7 +41,7 @@
     <ClInclude Include="src\SH.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\teapot.h">
+    <ClInclude Include="src\Tpt.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
