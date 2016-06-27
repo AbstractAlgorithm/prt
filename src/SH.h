@@ -20,6 +20,8 @@ Cubemap texel solid angle: http://www.rorydriscoll.com/2012/01/15/cubemap-texel-
 "Spherical Harmonics Lighting: The Gritty Details" by Robin Green"
 CUbemap Filtering Tool: https://github.com/dariomanesku/cmft
 https://github.com/bkaradzic/bgfx/blob/master/examples/28-wireframe/fs_wf_mesh.sc
+SH viz - Shadertoy: https://www.shadertoy.com/view/lsfXWH
+Table of real SH: https://en.wikipedia.org/wiki/Table_of_spherical_harmonics#Real_spherical_harmonics
 */
 
 namespace aa

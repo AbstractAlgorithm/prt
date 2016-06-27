@@ -439,10 +439,6 @@ void aa::sh::GenerateCoefficientsFBO(int face, unsigned size, aa::sh::SH_t& sh)
         }
     }
 
-    // conserve energy of total sh
-    //aa::sh::div(sh, PI4);
-    //aa::sh::mul(sh, 1.2);
-
     delete[] data;
 }
 
@@ -556,26 +552,6 @@ struct SHPainter
                     rgb += uSH[14] * sh[14];
                     rgb += uSH[15] * sh[15];
                     return rgb;
-
-                    /*vec3 nor = normalize(_dir);
-
-                    const float c1 = 0.429043;
-                    const float c2 = 0.511664;
-                    const float c3 = 0.743125;
-                    const float c4 = 0.886227;
-                    const float c5 = 0.247708;
-                    return (
-                        c1 * uSH[8] * (nor.x * nor.x - nor.y * nor.y) +
-                        c3 * uSH[6] * nor.z * nor.z +
-                        c4 * uSH[0] -
-                        c5 * uSH[6] +
-                        2.0 * c1 * uSH[4] * nor.x * nor.y +
-                        2.0 * c1 * uSH[7]  * nor.x * nor.z +
-                        2.0 * c1 * uSH[5] * nor.y * nor.z +
-                        2.0 * c2 * uSH[3]  * nor.x +
-                        2.0 * c2 * uSH[1] * nor.y +
-                        2.0 * c2 * uSH[2]  * nor.z
-                        );*/
                 }
 
                 void main()
