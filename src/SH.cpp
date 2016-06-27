@@ -7,7 +7,12 @@ void aa::sh::make(SH_t& sh, const double* values, int coeffsCnt)
 {
     assert(coeffsCnt < SH_CHANNELS*SH_BANDS*SH_BANDS);
     for (unsigned i = 0; i < coeffsCnt; i++)
-        sh[i % 3][i / 3] = values[i];
+    {
+        double val = values[i];
+        unsigned ch = i % 3;
+        unsigned ml = i / 3;
+        sh[ch][ml] = val;
+    }
 }
 
 void aa::sh::zero(SH_t& sh)
@@ -291,7 +296,7 @@ void aa::sh::GenerateCoefficients(GLuint cubemap, unsigned size, SH_t& sh)
 
 double areaElement(double x, double y)
 {
-    return atan2(x * y, sqrt(x * x + y * y + 1));
+    return atan2(x * y, sqrt(x * x + y * y + 1.0));
 }
 
 double cubemapTexelSolidAngle(unsigned res, double u, double v)
@@ -362,8 +367,8 @@ void evalSHBasis5(double* _shBasis, glm::dvec3 _dir)
 void aa::sh::GenerateCoefficientsFBO(int face, unsigned size, aa::sh::SH_t& sh)
 {
     // map cubemap face (current fbo) to the user memory
-    byte* data = new byte[size*size * 3];
-    glReadPixels(0, 0, size, size, GL_RGB, GL_UNSIGNED_BYTE, data);
+    byte* data = new byte[size*size * 4];
+    glReadPixels(0, 0, size, size, GL_RGBA, GL_UNSIGNED_BYTE, data);
 
     // for each texel on the cube map
     double texel_coeffs[25];
@@ -372,14 +377,14 @@ void aa::sh::GenerateCoefficientsFBO(int face, unsigned size, aa::sh::SH_t& sh)
         for (int j = 0; j < size; j++)
         {
             // get color
-            uint8_t r = data[(i*size + j) * 3];
-            uint8_t g = data[(i*size + j) * 3 + 1];
-            uint8_t b = data[(i*size + j) * 3 + 2];
+            double r = data[(i*size + j) * 4] / 255.0;
+            double g = data[(i*size + j) * 4 + 1] / 255.0;
+            double b = data[(i*size + j) * 4 + 2] / 255.0;
 
             // calc uv
             double halfTexel = 0.5 / (double)size;
             double u = (double)j / (double)size + halfTexel;
-            double v = (double)(size-i) / (double)size + halfTexel;
+            double v = (double)(size-1-i) / (double)size + halfTexel;
 
             // get dir
             glm::dvec3 dir;
@@ -435,7 +440,8 @@ void aa::sh::GenerateCoefficientsFBO(int face, unsigned size, aa::sh::SH_t& sh)
     }
 
     // conserve energy of total sh
-    aa::sh::div(sh, PI4);
+    //aa::sh::div(sh, PI4);
+    //aa::sh::mul(sh, 1.2);
 
     delete[] data;
 }
@@ -478,7 +484,7 @@ struct SHPainter
             GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
             const char* fs_shdr = GLSLify(330,
                 in vec2 uv;
-                uniform vec3 uSH[9];
+                uniform vec3 uSH[16];
                 out vec4 fragColor;
 
                 vec3 vecFromLatLong(vec2 _uv)
@@ -501,21 +507,36 @@ struct SHPainter
                 const float k03 = 1.0925484306; // sqrt(15/PI)/2
                 const float k04 = 0.3153915652; // sqrt( 5/PI)/4
                 const float k05 = 0.5462742153; // sqrt(15/PI)/4
+                const float k06 = 0.5900435860; // sqrt( 70/PI)/8
+                const float k07 = 2.8906114210; // sqrt(105/PI)/2
+                const float k08 = 0.4570214810; // sqrt( 42/PI)/8
+                const float k09 = 0.3731763300; // sqrt(  7/PI)/4
+                const float k10 = 1.4453057110; // sqrt(105/PI)/4
 
                 vec3 evalSH(vec3 _dir)
                 {
                     vec3 nn = normalize(_dir);
 
-                    float sh[9];
+                    float sh[16];
                     sh[0] = k01;
+
                     sh[1] = -k02*nn.y;
                     sh[2] = k02*nn.z;
                     sh[3] = -k02*nn.x;
+
                     sh[4] = k03*nn.y*nn.x;
                     sh[5] = -k03*nn.y*nn.z;
                     sh[6] = k04*(3.0*nn.z*nn.z - 1.0);
                     sh[7] = -k03*nn.x*nn.z;
                     sh[8] = k05*(nn.x*nn.x - nn.y*nn.y);
+
+                    sh[9] = -k06*nn.y*(3.0*nn.x*nn.x-nn.y*nn.y);
+                    sh[10] =  k07*nn.z*nn.y*nn.x;
+                    sh[11] = -k08*nn.y*(5.0*nn.z*nn.z-1.0);
+                    sh[12] =  k09*nn.z*(5.0*nn.z*nn.z-3.0);
+                    sh[13] = -k08*nn.x*(5.0*nn.z*nn.z-1.0);
+                    sh[14] =  k10*nn.z*(nn.x*nn.x-nn.y*nn.y);
+                    sh[15] = -k06*nn.x*(nn.x*nn.x-3.0*nn.y*nn.y);
 
                     vec3 rgb = vec3(0.0);
                     rgb += uSH[0] * sh[0];
@@ -527,7 +548,34 @@ struct SHPainter
                     rgb += uSH[6] * sh[6];
                     rgb += uSH[7] * sh[7];
                     rgb += uSH[8] * sh[8];
+                    rgb += uSH[9] * sh[9];
+                    rgb += uSH[10] * sh[10];
+                    rgb += uSH[11] * sh[11];
+                    rgb += uSH[12] * sh[12];
+                    rgb += uSH[13] * sh[13];
+                    rgb += uSH[14] * sh[14];
+                    rgb += uSH[15] * sh[15];
                     return rgb;
+
+                    /*vec3 nor = normalize(_dir);
+
+                    const float c1 = 0.429043;
+                    const float c2 = 0.511664;
+                    const float c3 = 0.743125;
+                    const float c4 = 0.886227;
+                    const float c5 = 0.247708;
+                    return (
+                        c1 * uSH[8] * (nor.x * nor.x - nor.y * nor.y) +
+                        c3 * uSH[6] * nor.z * nor.z +
+                        c4 * uSH[0] -
+                        c5 * uSH[6] +
+                        2.0 * c1 * uSH[4] * nor.x * nor.y +
+                        2.0 * c1 * uSH[7]  * nor.x * nor.z +
+                        2.0 * c1 * uSH[5] * nor.y * nor.z +
+                        2.0 * c2 * uSH[3]  * nor.x +
+                        2.0 * c2 * uSH[1] * nor.y +
+                        2.0 * c2 * uSH[2]  * nor.z
+                        );*/
                 }
 
                 void main()
@@ -601,15 +649,15 @@ struct SHPainter
         glGetIntegerv(GL_VIEWPORT, dims);
         glUniform2f(uloc_res, dims[2], dims[3]);
         glUniform4f(uloc_dim, (float)pos.x, (float)pos.y, (float)dim.x, (float)dim.y);
-        GLfloat shc_[27];
-        for (int i = 0; i < 27; i++)
+        GLfloat shc_[16 * 3];
+        for (int i = 0; i < sizeof(shc_)/sizeof(GLfloat); i++)
         {
             int channel = i % 3;
             int ml = i / 3;
             double val = sh[channel][ml];
             shc_[i] = (float)val;
         }
-        glUniform3fv(uloc_shc, 9, shc_);
+        glUniform3fv(uloc_shc, 16, shc_);
 
         glBindVertexArray(vao);
         glDrawArrays(GL_TRIANGLES, 0, 6);

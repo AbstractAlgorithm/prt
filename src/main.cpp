@@ -5,6 +5,45 @@
 
 using namespace aa;
 
+const double shc_two_lights[] = {
+    0.39925, 0.39925, 0.39925,
+    -0.21075, -0.21075, -0.21075,
+    0.28687, 0.28687, 0.28687,
+    0.28277, 0.28277, 0.28277,
+    -0.31530, -0.31530, -0.31530,
+    -0.00040, -0.00040, -0.00040,
+    0.13159, 0.13159, 0.13159,
+    0.00098, 0.00098, 0.00098,
+    -0.09359, -0.09359, -0.09359
+};
+
+const double shc_grace_cathedral[] = {
+    0.7953949, 0.4405923, 0.5459412,
+    0.3981450, 0.3526911, 0.6097158,
+    -0.3424573, -0.1838151, -0.2715583,
+    -0.2944621, -0.0560606, 0.0095193,
+    -0.1123051, -0.0513088, -0.1232869,
+    -0.2645007, -0.2257996, -0.4785847,
+    -0.1569444, -0.0954703, -0.1485053,
+    0.5646247, 0.2161586, 0.1402643,
+    0.2137442, -0.0547578, -0.3061700
+};
+
+const char* filenames[6] = {
+    "src/images/right.bmp",
+    "src/images/left.bmp",
+    "src/images/bottom.bmp",
+    "src/images/top.bmp",
+    "src/images/back.bmp",
+    "src/images/front.bmp" };
+const char* filenames_test[6] = {
+    "src/images/posx.bmp",
+    "src/images/negx.bmp",
+    "src/images/posy.bmp",
+    "src/images/negy.bmp",
+    "src/images/posz.bmp",
+    "src/images/negz.bmp" };
+
 struct
 {
     glm::mat4 p;
@@ -34,47 +73,35 @@ GLuint cm, testcm, imagecm;
 GLuint testtex[6];
 RECT hrect;
 bool wireframe;
-const unsigned cmRes = 32;
+const unsigned cmRes = 256;
 float cm_height;
 TwBar* uibar;
-
-void RandomWorld()
-{
-    glUseProgram(0);
-    glColor3f(1, 0, 0);
-    glBegin(GL_TRIANGLES);
-    // +x
-    glVertex3f(0.5f, 0.0f, -0.75f);
-    glVertex3f(0.5f, 0.0f, 0.75f);
-    glVertex3f(0.5f, 0.75f, 0.0f);
-    // -x
-    glVertex3f(-0.5f, 0.0f, -1.0f);
-    glVertex3f(-0.5f, 0.0f, 1.0f);
-    glVertex3f(-0.5f, 1.0f, 0.0f);
-    // +y
-    // -y
-    // +z
-    // -z
-    glEnd();
-}
 
 void DrawWorld(glm::mat4 v, glm::mat4 p)
 {
     static int i = 0;
-    glClearColor(1, 1, 1, 1);
+
+    glClearColor(1,1,1, 1);
+
+    if (i<2) glClearColor(1,0,0,1);
+    else if (i<4) glClearColor(0, 1, 0, 1);
+    else glClearColor(0, 0, 1, 1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
-    
 
-    //render::RenderSkybox(imagecm, v, p);
+    render::RenderSkybox(imagecm, v, p);
+    //render::DrawTexturedQuad(testtex[i], 0, 0, cmRes, cmRes);
     //render::DrawLODTerrain(terrain.heightmap, terrain.m, v, p);
+
+    i = (i + 1) % 6;
 }
 
-sh::SH_t mysh;
+sh::SH_t shc_my_scene;
 void fillMySH(unsigned i, unsigned size)
 {
-    sh::GenerateCoefficientsFBO(i, size, mysh);
+    sh::GenerateCoefficientsFBO(i, size, shc_my_scene);
 }
 
 void main()
@@ -101,69 +128,17 @@ void main()
     TwAddVarRW(uibar, "Radius", TW_TYPE_FLOAT, &camera.r, " min=0.01 max=1 step=0.01 ");
     TwAddVarRW(uibar, "Height", TW_TYPE_FLOAT, &cm_height, " min=0.0 max=3 step=0.005 ");
 
-    const char* filenames[6] = {
-        "src/images/right.bmp",
-        "src/images/left.bmp",
-        "src/images/bottom.bmp",
-        "src/images/top.bmp",
-        "src/images/back.bmp",
-        "src/images/front.bmp" };
     imagecm = render::CreteTextureCubemap(filenames);
-
-    const char* filenames_test[6] = {
-        "src/images/posx.bmp",
-        "src/images/negx.bmp",
-        "src/images/posy.bmp",
-        "src/images/negy.bmp",
-        "src/images/posz.bmp",
-        "src/images/negz.bmp" };
     testcm = render::CreteTextureCubemap(filenames_test);
+    for (int i = 0; i < 6; i++) testtex[i] = render::CreateTexture2D(filenames_test[i]);
 
-    for (int i = 0; i < 6; i++)
-        testtex[i] = render::CreateTexture2D(filenames_test[i]);
-
-    //cm = render::CreteTextureCubemap(filenames);
     cm = render::CreateCubemapEmpty(glm::ivec2(cmRes, cmRes));
-
-    const double vals[] = {
-        0.967757057878229854,   0.976516067990363390,   0.891218272348969998,
-        -0.384163503608655643,  -0.423492289131209787,  -0.425532726148547868,
-        0.055906294587354334,   0.056627436881069373,   0.069969936396987467,
-        0.120985157386215209,   0.119297994074027414,   0.117111965829213599,
-        -0.176711633774331106,  -0.170331404095516392,  -0.151345020570876621,
-        -0.124682114349692147,  -0.119340785411183953,  -0.096300354204368860,
-        0.001852378550138503,   -0.032592784164597745,  -0.088204495001329680,
-        0.296365482782109446,   0.281268696656263029,   0.243328223888495510,
-        -0.079826665303240341,  -0.109340956251195970,  -0.157208859664677764
-    };
-    sh::SH_t example_sh;
-    sh::make(example_sh, vals, 9*3);
-    sh::zero(example_sh);
-    example_sh[0][2] = 4.0;
-    example_sh[1][2] = 4.0;
-    example_sh[2][2] = 4.0;
-
-    sh::zero(mysh);
-    // fill cubemap
+    sh::zero(shc_my_scene);
     render::FillCubemap(cm, cmRes, glm::vec3(0.0f, cm_height, 0.0f), &DrawWorld, &fillMySH);
 
-    const double gcc[] = {
-        .79, .44, .54,
-        .39, .35, .60,
-        -.34, -.18, -.27,
-        -.29, -.06, .01,
-        -.11, -.05, -.12,
-        -.26, -.22, -.47,
-        -.16, -.09, -.15,
-        .56, .21, .14,
-        .21, -.05, -.30
-    };
     sh::SH_t grace_catedral_sh;
-    sh::make(grace_catedral_sh, vals, 9 * 3);
-
-
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LEQUAL);
+    sh::zero(grace_catedral_sh);
+    sh::make(grace_catedral_sh, shc_grace_cathedral, 9 * 3);
 
     // loop
     while (!window::windowShouldClose())
@@ -187,23 +162,22 @@ void main()
             // render
             if (wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
             else glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-            
+
             glViewport(0, 0, hrect.right, hrect.bottom);
             glClearColor(54.0f / 255.0f, 122.0f / 255.0f, 165.0f / 255.0f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glDisable(GL_CULL_FACE);
             glEnable(GL_DEPTH_TEST);
             //render::DrawLODTerrain(terrain.heightmap, terrain.m, camera.v(), camera.p);
-            render::RenderSkybox(imagecm, camera.v(), camera.p);
-            
+            //render::RenderSkybox(imagecm, camera.v(), camera.p);
+
+            sh::DrawLatlong(grace_catedral_sh, glm::ivec2(80, 568), glm::uvec2(400, 200));
+            sh::DrawLatlong(shc_my_scene, glm::ivec2(480, 568), glm::uvec2(400, 200));
             render::DrawCubemapAsLatlong(cm, 880, 568, 400, 200);
             //render::DrawCubemapProbe(imagecm, 680, 568,  200);
             //render::DrawCubemapAsLatlong(testcm, 0, 368, 400, 200);
             //render::DrawCubemapAsLatlong(imagecm, 0, 568, 400, 200);
 
-            sh::DrawLatlong(mysh, glm::ivec2(480, 568), glm::uvec2(400, 200));
-            sh::DrawLatlong(example_sh, glm::ivec2(80, 568), glm::uvec2(400, 200));
-            
             TwDraw();
         }
 
