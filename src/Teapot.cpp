@@ -5889,7 +5889,7 @@ struct Teapot
     }
 };
 
-void aa::teapot::Draw2(glm::mat4 m, glm::mat4 v, glm::mat4 p)
+void aa::teapot::Draw(glm::mat4 m, glm::mat4 v, glm::mat4 p)
 {
     static Teapot t;
     t.Draw(m, v, p);
