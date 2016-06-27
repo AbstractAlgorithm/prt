@@ -93,7 +93,7 @@ void DrawWorld(glm::mat4 v, glm::mat4 p)
 
     render::RenderSkybox(imagecm, v, p);
     //render::DrawTexturedQuad(testtex[i], 0, 0, cmRes, cmRes);
-    //render::DrawLODTerrain(terrain.heightmap, terrain.m, v, p);
+    render::DrawLODTerrain(terrain.heightmap, terrain.m, v, p);
 
     i = (i + 1) % 6;
 }
@@ -102,6 +102,12 @@ sh::SH_t shc_my_scene;
 void fillMySH(unsigned i, unsigned size)
 {
     sh::GenerateCoefficientsFBO(i, size, shc_my_scene);
+}
+
+void TW_CALL genSH(void * /*clientData*/)
+{
+    sh::zero(shc_my_scene);
+    render::FillCubemap(cm, cmRes, glm::vec3(0.0f, cm_height, 0.0f), &DrawWorld, &fillMySH);
 }
 
 void main()
@@ -127,14 +133,14 @@ void main()
     TwAddVarRW(uibar, "Wireframe", TW_TYPE_BOOLCPP, &wireframe, "");
     TwAddVarRW(uibar, "Radius", TW_TYPE_FLOAT, &camera.r, " min=0.01 max=1 step=0.01 ");
     TwAddVarRW(uibar, "Height", TW_TYPE_FLOAT, &cm_height, " min=0.0 max=3 step=0.005 ");
+    TwAddButton(uibar, "Generate SH", genSH, NULL, " label='Generate SH' ");
 
     imagecm = render::CreteTextureCubemap(filenames);
     testcm = render::CreteTextureCubemap(filenames_test);
     for (int i = 0; i < 6; i++) testtex[i] = render::CreateTexture2D(filenames_test[i]);
 
     cm = render::CreateCubemapEmpty(glm::ivec2(cmRes, cmRes));
-    sh::zero(shc_my_scene);
-    render::FillCubemap(cm, cmRes, glm::vec3(0.0f, cm_height, 0.0f), &DrawWorld, &fillMySH);
+    genSH(0);
 
     sh::SH_t grace_catedral_sh;
     sh::zero(grace_catedral_sh);
@@ -159,6 +165,8 @@ void main()
 
         // drawing
         {
+            render::FillCubemap(cm, cmRes, glm::vec3(0.0f, cm_height, 0.0f), &DrawWorld);
+
             // render
             if (wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
             else glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -168,10 +176,11 @@ void main()
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glDisable(GL_CULL_FACE);
             glEnable(GL_DEPTH_TEST);
-            //render::DrawLODTerrain(terrain.heightmap, terrain.m, camera.v(), camera.p);
-            //render::RenderSkybox(imagecm, camera.v(), camera.p);
+            render::DrawLODTerrain(terrain.heightmap, terrain.m, camera.v(), camera.p);
+            render::RenderSkybox(imagecm, camera.v(), camera.p);
 
-            sh::DrawLatlong(grace_catedral_sh, glm::ivec2(80, 568), glm::uvec2(400, 200));
+            //sh::DrawLatlong(grace_catedral_sh, glm::ivec2(80, 568), glm::uvec2(400, 200));
+            
             sh::DrawLatlong(shc_my_scene, glm::ivec2(480, 568), glm::uvec2(400, 200));
             render::DrawCubemapAsLatlong(cm, 880, 568, 400, 200);
             //render::DrawCubemapProbe(imagecm, 680, 568,  200);
