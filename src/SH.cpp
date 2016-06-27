@@ -6,7 +6,7 @@
 void aa::sh::make(SH_t& sh, const double* values, int coeffsCnt)
 {
     assert(coeffsCnt < SH_CHANNELS*SH_BANDS*SH_BANDS);
-    for (unsigned i = 0; i < coeffsCnt; i++)
+    for (int i = 0; i < coeffsCnt; i++)
     {
         double val = values[i];
         unsigned ch = i % 3;
@@ -374,7 +374,7 @@ void aa::sh::GenerateCoefficientsFBO(int face, unsigned size, aa::sh::SH_t& sh)
     double texel_coeffs[25];
     for (int i = size - 1; i >= 0; i--)
     {
-        for (int j = 0; j < size; j++)
+        for (unsigned j = 0; j < size; j++)
         {
             // get color
             double r = data[(i*size + j) * 4] / 255.0;
@@ -623,7 +623,7 @@ struct SHPainter
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         int dims[4];
         glGetIntegerv(GL_VIEWPORT, dims);
-        glUniform2f(uloc_res, dims[2], dims[3]);
+        glUniform2f(uloc_res, (float)dims[2], (float)dims[3]);
         glUniform4f(uloc_dim, (float)pos.x, (float)pos.y, (float)dim.x, (float)dim.y);
         GLfloat shc_[16 * 3];
         for (int i = 0; i < sizeof(shc_)/sizeof(GLfloat); i++)
@@ -844,7 +844,7 @@ struct SHProbe
         glUniform3fv(uloc_shc, 16, shc_);
         int dims[4];
         glGetIntegerv(GL_VIEWPORT, dims);
-        glUniform2f(uloc_res, dims[2], dims[3]);
+        glUniform2f(uloc_res, (float)dims[2], (float)dims[3]);
         glUniform4f(uloc_dim, (float)x, (float)y, (float)dim, (float)dim);
 
         glBindVertexArray(vao);
