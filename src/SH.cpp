@@ -646,3 +646,227 @@ void aa::sh::DrawLatlong(SH_t sh, glm::ivec2 pos, glm::uvec2 dim)
     shp.draw(sh, pos, dim);
 }
 
+struct SHProbe
+{
+    GLuint vao, vbo, program;
+    GLint uloc_shc, uloc_res, uloc_dim;
+
+    SHProbe()
+    {
+        // init shaders
+        program = glCreateProgram();
+        {
+            GLuint vs = glCreateShader(GL_VERTEX_SHADER);
+            static const char* vs_shdr = GLSLify(330,
+                in vec2 iPos;
+                uniform vec2 uRes;
+                uniform vec4 uDim;
+                out vec2 uv;
+
+                void main()
+                {
+                    vec2 sz = 2.0 * (uDim.zw / uRes);
+                    vec2 disp = 2.0 * (uDim.xy / uRes);
+                    vec2 p = iPos * 0.5 + vec2(0.5, 0.5);
+                    p *= sz;
+                    p += disp - vec2(1, 1);
+                    gl_Position = vec4(p.x, -p.y, 0.5, 1.0);
+
+                    uv = (iPos + vec2(1.0)) * 0.5;
+                }
+            );
+            glShaderSource(vs, 1, &vs_shdr, NULL);
+            glCompileShader(vs);
+            glAttachShader(program, vs);
+
+            GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
+            const char* fs_shdr = GLSLify(330,
+                in vec2 uv;
+                uniform vec3 uSH[16];
+                uniform vec4 uDim;
+                out vec4 fragColor;
+
+                vec3 vecFromLatLong(vec2 _uv)
+                {
+                    float pi = 3.14159265;
+                    float twoPi = 2.0*pi;
+                    float phi = _uv.x * twoPi;
+                    float theta = _uv.y * pi;
+
+                    vec3 result;
+                    result.x = -sin(theta)*sin(phi);
+                    result.y = -cos(theta);
+                    result.z = -sin(theta)*cos(phi);
+
+                    return result;
+                }
+
+                const float k01 = 0.2820947918; // sqrt( 1/PI)/2
+                const float k02 = 0.4886025119; // sqrt( 3/PI)/2
+                const float k03 = 1.0925484306; // sqrt(15/PI)/2
+                const float k04 = 0.3153915652; // sqrt( 5/PI)/4
+                const float k05 = 0.5462742153; // sqrt(15/PI)/4
+                const float k06 = 0.5900435860; // sqrt( 70/PI)/8
+                const float k07 = 2.8906114210; // sqrt(105/PI)/2
+                const float k08 = 0.4570214810; // sqrt( 42/PI)/8
+                const float k09 = 0.3731763300; // sqrt(  7/PI)/4
+                const float k10 = 1.4453057110; // sqrt(105/PI)/4
+
+                vec3 evalSH(vec3 _dir)
+                {
+                    vec3 nn = normalize(_dir);
+
+                    float sh[16];
+                    sh[0] = k01;
+
+                    sh[1] = -k02*nn.y;
+                    sh[2] = k02*nn.z;
+                    sh[3] = -k02*nn.x;
+
+                    sh[4] = k03*nn.y*nn.x;
+                    sh[5] = -k03*nn.y*nn.z;
+                    sh[6] = k04*(3.0*nn.z*nn.z - 1.0);
+                    sh[7] = -k03*nn.x*nn.z;
+                    sh[8] = k05*(nn.x*nn.x - nn.y*nn.y);
+
+                    sh[9] = -k06*nn.y*(3.0*nn.x*nn.x - nn.y*nn.y);
+                    sh[10] = k07*nn.z*nn.y*nn.x;
+                    sh[11] = -k08*nn.y*(5.0*nn.z*nn.z - 1.0);
+                    sh[12] = k09*nn.z*(5.0*nn.z*nn.z - 3.0);
+                    sh[13] = -k08*nn.x*(5.0*nn.z*nn.z - 1.0);
+                    sh[14] = k10*nn.z*(nn.x*nn.x - nn.y*nn.y);
+                    sh[15] = -k06*nn.x*(nn.x*nn.x - 3.0*nn.y*nn.y);
+
+                    vec3 rgb = vec3(0.0);
+                    rgb += uSH[0] * sh[0];
+                    rgb += uSH[1] * sh[1];
+                    rgb += uSH[2] * sh[2];
+                    rgb += uSH[3] * sh[3];
+                    rgb += uSH[4] * sh[4];
+                    rgb += uSH[5] * sh[5];
+                    rgb += uSH[6] * sh[6];
+                    rgb += uSH[7] * sh[7];
+                    rgb += uSH[8] * sh[8];
+                    rgb += uSH[9] * sh[9];
+                    rgb += uSH[10] * sh[10];
+                    rgb += uSH[11] * sh[11];
+                    rgb += uSH[12] * sh[12];
+                    rgb += uSH[13] * sh[13];
+                    rgb += uSH[14] * sh[14];
+                    rgb += uSH[15] * sh[15];
+                    return rgb;
+                }
+
+                void main()
+                {
+                    vec2 p = uv*2.0 - vec2(1.0);
+                    float aspect = uDim.z / uDim.w;
+                    p.x *= aspect;
+                    if (length(p) < 1.0)
+                    {
+                        float theta = acos(p.x);
+                        float phi = acos(p.y);
+                        float sr = sin(phi);
+                        vec3 n;
+                        n.x = p.x;
+                        n.y = p.y;
+                        n.z = sqrt(sr*sr - p.x*p.x);
+                        n = normalize(n);
+
+                        vec3 camera = vec3(0.0, 0.0, 30.0);
+                        camera.y /= aspect;
+                        vec3 ray = n - camera;
+                        vec3 rRay = reflect(ray, n);
+                        vec3 col = evalSH(rRay);
+                        fragColor = vec4(col,1.0);
+                    }
+
+                    else
+                        discard;
+                }
+            );
+            glShaderSource(fs, 1, &fs_shdr, NULL);
+            glCompileShader(fs);
+            glAttachShader(program, fs);
+
+            glLinkProgram(program);
+            glDeleteShader(vs);
+            glDeleteShader(fs);
+            {
+                printf("Probe shader info:\n");
+                int infologLen = 0;
+                int charsWritten = 0;
+                GLchar *infoLog = NULL;
+                glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infologLen);
+                if (infologLen > 0)
+                {
+                    infoLog = (GLchar*)malloc(infologLen);
+                    if (infoLog == NULL)
+                        return;
+                    glGetProgramInfoLog(program, infologLen, &charsWritten, infoLog);
+                }
+                printf("%s\n", infoLog);
+                delete[] infoLog;
+            }
+        }
+        uloc_res = glGetUniformLocation(program, "uRes");
+        uloc_shc = glGetUniformLocation(program, "uSH");
+        uloc_dim = glGetUniformLocation(program, "uDim");
+
+        // init fs quad
+        glGenVertexArrays(1, &vao);
+        glGenBuffers(1, &vbo);
+
+        glBindVertexArray(vao);
+        GLfloat verts[12] = { -1, -1, 1, 1, -1, 1, -1, -1, 1, -1, 1, 1 };
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
+        glBindVertexArray(0);
+    }
+
+    void Draw(aa::sh::SH_t sh, unsigned x, unsigned y, unsigned dim)
+    {
+        glUseProgram(program);
+
+        glDisable(GL_CULL_FACE);
+        glDisable(GL_DEPTH_TEST);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        GLfloat shc_[16 * 3];
+        for (int i = 0; i < sizeof(shc_) / sizeof(GLfloat); i++)
+        {
+            int channel = i % 3;
+            int ml = i / 3;
+            double val = sh[channel][ml];
+            shc_[i] = (float)val;
+        }
+        glUniform3fv(uloc_shc, 16, shc_);
+        int dims[4];
+        glGetIntegerv(GL_VIEWPORT, dims);
+        glUniform2f(uloc_res, dims[2], dims[3]);
+        glUniform4f(uloc_dim, (float)x, (float)y, (float)dim, (float)dim);
+
+        glBindVertexArray(vao);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+    }
+
+    ~SHProbe()
+    {
+        glBindVertexArray(0);
+        glDeleteBuffers(1, &vbo);
+        glDeleteVertexArrays(1, &vao);
+        vbo = 0;
+        vao = 0;
+
+        glDeleteProgram(program);
+        program = 0;
+    }
+};
+
+void aa::sh::DrawProbe(SH_t sh, unsigned x, unsigned y, unsigned dim)
+{
+    static SHProbe shp;
+    shp.Draw(sh, x, y, dim);
+}
+

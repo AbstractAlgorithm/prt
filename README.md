@@ -19,15 +19,15 @@ precomputed radiance transport
     - diffuse
         - direct
         - self-shadow
-        - self-interreflection
+        - interreflection
     - debug view
-    - specular
-        - ?
     - volumetric
         - direct + self-shadow
     - neighborhood transfer (soft shadows)
         - direct + self-shadow
     - radiance transfer volumes
+    - specular
+        - ?
     - dynamic
         - dynamic scenes
         - dynamic transfer functions

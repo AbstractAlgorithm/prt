@@ -53,6 +53,7 @@ namespace aa
 
         void GenerateCoefficientsFBO(int face, unsigned size, SH_t& sh);
         void DrawLatlong(SH_t sh, glm::ivec2 pos, glm::uvec2 dim);
+        void DrawProbe(SH_t sh, unsigned x, unsigned y, unsigned dim);
         void GenerateCoefficients(GLuint cubemap, unsigned size, SH_t& sh); // not done (CS version)
     }
 }

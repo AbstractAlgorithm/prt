@@ -183,6 +183,7 @@ void main()
             
             sh::DrawLatlong(shc_my_scene, glm::ivec2(480, 568), glm::uvec2(400, 200));
             render::DrawCubemapAsLatlong(cm, 880, 568, 400, 200);
+            //sh::DrawProbe(shc_my_scene, 0, 0, 200);
             //render::DrawCubemapProbe(imagecm, 680, 568,  200);
             //render::DrawCubemapAsLatlong(testcm, 0, 368, 400, 200);
             //render::DrawCubemapAsLatlong(imagecm, 0, 568, 400, 200);
