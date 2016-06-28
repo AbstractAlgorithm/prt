@@ -5771,7 +5771,7 @@ const int numIndices = 47112;
 struct Teapot
 {
     GLuint vao, vbo_pos, vbo_nor, vbo_uv, ibo;
-    GLint uloc_m, uloc_v, uloc_p;
+    GLint uloc_m, uloc_v, uloc_p, uloc_shc;
     GLuint program;
 
     Teapot()
@@ -5796,7 +5796,8 @@ struct Teapot
                     no_tr[3][2] = 0.0;
                     gl_Position = uProjMat * uViewMat * uModelMat *vec4(iPos, 1.0);
 
-                    normal = (uViewMat * no_tr * vec4(iNormal, 1.0)).xyz;
+                    //normal = (uViewMat * no_tr * vec4(iNormal, 1.0)).xyz;
+                    normal = iNormal;
                 }
             );
             glShaderSource(vs, 1, &vs_shdr, NULL);
@@ -5805,12 +5806,72 @@ struct Teapot
 
             GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
             const char* fs_shdr = GLSLify(330,
-                out vec4 fragColor;
                 in vec3 normal;
+                uniform vec3 uSH[16];
+                out vec4 fragColor;
+                
+
+                const float k01 = 0.2820947918; // sqrt( 1/PI)/2
+                const float k02 = 0.4886025119; // sqrt( 3/PI)/2
+                const float k03 = 1.0925484306; // sqrt(15/PI)/2
+                const float k04 = 0.3153915652; // sqrt( 5/PI)/4
+                const float k05 = 0.5462742153; // sqrt(15/PI)/4
+                const float k06 = 0.5900435860; // sqrt( 70/PI)/8
+                const float k07 = 2.8906114210; // sqrt(105/PI)/2
+                const float k08 = 0.4570214810; // sqrt( 42/PI)/8
+                const float k09 = 0.3731763300; // sqrt(  7/PI)/4
+                const float k10 = 1.4453057110; // sqrt(105/PI)/4
+
+                vec3 evalSH(vec3 _dir)
+                {
+                    vec3 nn = normalize(_dir);
+
+                    float sh[16];
+                    sh[0] = k01;
+
+                    sh[1] = -k02*nn.y;
+                    sh[2] = k02*nn.z;
+                    sh[3] = -k02*nn.x;
+
+                    sh[4] = k03*nn.y*nn.x;
+                    sh[5] = -k03*nn.y*nn.z;
+                    sh[6] = k04*(3.0*nn.z*nn.z - 1.0);
+                    sh[7] = -k03*nn.x*nn.z;
+                    sh[8] = k05*(nn.x*nn.x - nn.y*nn.y);
+
+                    sh[9] = -k06*nn.y*(3.0*nn.x*nn.x - nn.y*nn.y);
+                    sh[10] = k07*nn.z*nn.y*nn.x;
+                    sh[11] = -k08*nn.y*(5.0*nn.z*nn.z - 1.0);
+                    sh[12] = k09*nn.z*(5.0*nn.z*nn.z - 3.0);
+                    sh[13] = -k08*nn.x*(5.0*nn.z*nn.z - 1.0);
+                    sh[14] = k10*nn.z*(nn.x*nn.x - nn.y*nn.y);
+                    sh[15] = -k06*nn.x*(nn.x*nn.x - 3.0*nn.y*nn.y);
+
+                    vec3 rgb = vec3(0.0);
+                    rgb += uSH[0] * sh[0];
+                    rgb += uSH[1] * sh[1];
+                    rgb += uSH[2] * sh[2];
+                    rgb += uSH[3] * sh[3];
+                    rgb += uSH[4] * sh[4];
+                    rgb += uSH[5] * sh[5];
+                    rgb += uSH[6] * sh[6];
+                    rgb += uSH[7] * sh[7];
+                    rgb += uSH[8] * sh[8];
+                    /*rgb += uSH[9] * sh[9];
+                    rgb += uSH[10] * sh[10];
+                    rgb += uSH[11] * sh[11];
+                    rgb += uSH[12] * sh[12];
+                    rgb += uSH[13] * sh[13];
+                    rgb += uSH[14] * sh[14];
+                    rgb += uSH[15] * sh[15];*/
+                    return rgb;
+                }
 
                 void main()
                 {
-                    fragColor = vec4(normal*0.5+vec3(0.5,0.5,0.5), 1.0);
+                    vec3 col = evalSH(-normal);
+                    //fragColor = vec4(normal*0.5+vec3(0.5,0.5,0.5), 1.0);
+                    fragColor = vec4(col, 1.0);
                 }
             );
             glShaderSource(fs, 1, &fs_shdr, NULL);
@@ -5840,6 +5901,7 @@ struct Teapot
         uloc_m = glGetUniformLocation(program, "uModelMat");
         uloc_v = glGetUniformLocation(program, "uViewMat");
         uloc_p = glGetUniformLocation(program, "uProjMat");
+        uloc_shc = glGetUniformLocation(program, "uSH");
 
         glGenVertexArrays(1, &vao);
         glBindVertexArray(vao);
@@ -5865,14 +5927,22 @@ struct Teapot
 
         glBindVertexArray(0);
     }
-    void Draw(glm::mat4 m, glm::mat4 v, glm::mat4 p)
+    void Draw(aa::sh::SH_t _sh, glm::mat4 m, glm::mat4 v, glm::mat4 p)
     {
-        //glEnable(GL_DEPTH_TEST);
         glUseProgram(program);
 
         glUniformMatrix4fv(uloc_m, 1, GL_FALSE, glm::value_ptr(m));
         glUniformMatrix4fv(uloc_v, 1, GL_FALSE, glm::value_ptr(v));
         glUniformMatrix4fv(uloc_p, 1, GL_FALSE, glm::value_ptr(p));
+        GLfloat shc_[16 * 3];
+        for (int i = 0; i < sizeof(shc_) / sizeof(GLfloat); i++)
+        {
+            int channel = i % 3;
+            int ml = i / 3;
+            double val = _sh[channel][ml];
+            shc_[i] = (float)val;
+        }
+        glUniform3fv(uloc_shc, 16, shc_);
 
         glBindVertexArray(vao);
         glDrawElements(GL_TRIANGLES, numIndices, GL_UNSIGNED_INT, 0);
@@ -5894,8 +5964,8 @@ struct Teapot
     }
 };
 
-void aa::teapot::Draw(glm::mat4 m, glm::mat4 v, glm::mat4 p)
+void aa::teapot::Draw(sh::SH_t _sh, glm::mat4 m, glm::mat4 v, glm::mat4 p)
 {
     static Teapot t;
-    t.Draw(m, v, p);
+    t.Draw(_sh, m, v, p);
 }

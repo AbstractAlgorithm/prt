@@ -9,12 +9,13 @@ Distributed with the G3D Innovation Engine http://g3d.cs.williams.edu
 */
 
 #include "Render.h"
+#include "SH.h"
 
 namespace aa
 {
     namespace teapot
     {
-        void Draw(glm::mat4 m, glm::mat4 v, glm::mat4 p);
+        void Draw(sh::SH_t _sh, glm::mat4 m, glm::mat4 v, glm::mat4 p);
     }
 }
 

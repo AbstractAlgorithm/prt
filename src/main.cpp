@@ -75,7 +75,7 @@ GLuint cm, testcm, imagecm;
 GLuint testtex[6];
 RECT hrect;
 bool wireframe;
-const unsigned cmRes = 256;
+const unsigned cmRes = 1024;
 float cm_height;
 TwBar* uibar;
 
@@ -83,11 +83,11 @@ void DrawWorld(glm::mat4 v, glm::mat4 p)
 {
     static int i = 0;
 
-    glClearColor(1,1,1, 1);
+    glClearColor(0,0,0, 1);
 
-    if (i<2) glClearColor(1,0,0,1);
-    else if (i<4) glClearColor(0, 1, 0, 1);
-    else glClearColor(0, 0, 1, 1);
+    //if (i<2) glClearColor(1,0,0,1);
+    //else if (i<4) glClearColor(0, 1, 0, 1);
+    //else glClearColor(0, 0, 1, 1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glEnable(GL_DEPTH_TEST);
@@ -186,10 +186,10 @@ void main()
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glDisable(GL_CULL_FACE);
             glEnable(GL_DEPTH_TEST);
-            terrain::DrawTess(terra.heightmap, terra.m, camera.v(), camera.p);
-            render::RenderSkybox(imagecm, camera.v(), camera.p);
+            //terrain::DrawTess(terra.heightmap, terra.m, camera.v(), camera.p);
+            render::RenderSkybox(cm, camera.v(), camera.p);
 
-            teapot::Draw(tm, camera.v(), camera.p);
+            teapot::Draw(shc_my_scene, tm, camera.v(), camera.p);
 
             //sh::DrawLatlong(grace_catedral_sh, glm::ivec2(80, 568), glm::uvec2(400, 200));
             
