@@ -544,13 +544,13 @@ struct SHPainter
                     rgb += uSH[6] * sh[6];
                     rgb += uSH[7] * sh[7];
                     rgb += uSH[8] * sh[8];
-                    rgb += uSH[9] * sh[9];
+                    /*rgb += uSH[9] * sh[9];
                     rgb += uSH[10] * sh[10];
                     rgb += uSH[11] * sh[11];
                     rgb += uSH[12] * sh[12];
                     rgb += uSH[13] * sh[13];
                     rgb += uSH[14] * sh[14];
-                    rgb += uSH[15] * sh[15];
+                    rgb += uSH[15] * sh[15];*/
                     return rgb;
                 }
 

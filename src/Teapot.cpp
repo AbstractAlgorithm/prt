@@ -5776,32 +5776,8 @@ struct Teapot
 
     Teapot()
     {
-        glGenVertexArrays(1, &vao);
-        glBindVertexArray(vao);
-
-        // pos
-        glGenBuffers(1, &vbo_pos);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo_pos);
-        glBufferData(GL_ARRAY_BUFFER, numVertices * 3 * sizeof(float), position, GL_STATIC_DRAW);
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-        // nor
-        glGenBuffers(1, &vbo_nor);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo_nor);
-        glBufferData(GL_ARRAY_BUFFER, numVertices * 3 * sizeof(float), normal, GL_STATIC_DRAW);
-        glEnableVertexAttribArray(1);
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-        // indices
-        glGenBuffers(1, &ibo);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, numIndices * sizeof(int), index, GL_STATIC_DRAW);
-
-        glBindVertexArray(0);
-
         // shader
-        GLuint program = glCreateProgram();
+        program = glCreateProgram();
         {
             GLuint vs = glCreateShader(GL_VERTEX_SHADER);
             static const char* vs_shdr = GLSLify(330,
@@ -5814,8 +5790,13 @@ struct Teapot
 
                 void main()
                 {
+                    mat4 no_tr = uModelMat;
+                    no_tr[3][0] = 0.0;
+                    no_tr[3][1] = 0.0;
+                    no_tr[3][2] = 0.0;
                     gl_Position = uProjMat * uViewMat * uModelMat *vec4(iPos, 1.0);
-                    normal = iNormal;
+
+                    normal = (uViewMat * no_tr * vec4(iNormal, 1.0)).xyz;
                 }
             );
             glShaderSource(vs, 1, &vs_shdr, NULL);
@@ -5829,7 +5810,7 @@ struct Teapot
 
                 void main()
                 {
-                    fragColor = vec4(normal, 1.0)
+                    fragColor = vec4(normal*0.5+vec3(0.5,0.5,0.5), 1.0);
                 }
             );
             glShaderSource(fs, 1, &fs_shdr, NULL);
@@ -5859,10 +5840,34 @@ struct Teapot
         uloc_m = glGetUniformLocation(program, "uModelMat");
         uloc_v = glGetUniformLocation(program, "uViewMat");
         uloc_p = glGetUniformLocation(program, "uProjMat");
-        program = program;
+
+        glGenVertexArrays(1, &vao);
+        glBindVertexArray(vao);
+
+        // pos
+        glGenBuffers(1, &vbo_pos);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo_pos);
+        glBufferData(GL_ARRAY_BUFFER, numVertices * 3 * sizeof(float), position, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+        // nor
+        glGenBuffers(1, &vbo_nor);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo_nor);
+        glBufferData(GL_ARRAY_BUFFER, numVertices * 3 * sizeof(float), normal, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+        // indices
+        glGenBuffers(1, &ibo);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, numIndices * sizeof(int), index, GL_STATIC_DRAW);
+
+        glBindVertexArray(0);
     }
     void Draw(glm::mat4 m, glm::mat4 v, glm::mat4 p)
     {
+        //glEnable(GL_DEPTH_TEST);
         glUseProgram(program);
 
         glUniformMatrix4fv(uloc_m, 1, GL_FALSE, glm::value_ptr(m));

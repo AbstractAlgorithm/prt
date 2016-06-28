@@ -3,6 +3,7 @@
 #include <cmath>
 #include "SH.h"
 #include "Teapot.h"
+#include "Terrain.h"
 
 using namespace aa;
 
@@ -69,7 +70,7 @@ struct
 {
     GLuint heightmap;
     glm::mat4 m;
-} terrain;
+} terra;
 GLuint cm, testcm, imagecm;
 GLuint testtex[6];
 RECT hrect;
@@ -116,26 +117,30 @@ void main()
     // init
     glViewport(0, 0, hrect.right, hrect.bottom);
     TwInit(TW_OPENGL, NULL);
-    
     glClearColor(54.0f / 255.0f, 122.0f / 255.0f, 165.0f / 255.0f, 1.0f);
     GetClientRect(window::g_hWnd, &hrect);
+    wireframe = false;
+
+    // camera
     camera.angle = 0.0f;
     camera.yaw = 0.0f;
     camera.r = 1.0f;
     camera.p = glm::perspective(45.0f, (float)hrect.right / (float)hrect.bottom, 0.001f, 10.0f);
     
-    terrain.m = glm::mat4(1.0f);
-    terrain.m = glm::translate(terrain.m, glm::vec3(-0.5f, 0.0f, -0.5f));
-    wireframe = false;
-    terrain.heightmap = render::CreateTexture2D("src/images/terrain1.bmp");
+    // terrain
+    terra.m = glm::mat4(1.0f);
+    terra.m = glm::translate(terra.m, glm::vec3(-0.5f, 0.0f, -0.5f));
+    terra.heightmap = render::CreateTexture2D("src/images/terrain1.bmp");
     cm_height = 0.6f;
 
+    // ui bar
     uibar = TwNewBar("PRT");
     TwAddVarRW(uibar, "Wireframe", TW_TYPE_BOOLCPP, &wireframe, "");
     TwAddVarRW(uibar, "Radius", TW_TYPE_FLOAT, &camera.r, " min=0.01 max=1 step=0.01 ");
     TwAddVarRW(uibar, "Height", TW_TYPE_FLOAT, &cm_height, " min=0.0 max=3 step=0.005 ");
     TwAddButton(uibar, "Generate SH", genSH, NULL, " label='Generate SH' ");
 
+    // skyboxes
     imagecm = render::CreteTextureCubemap(filenames);
     testcm = render::CreteTextureCubemap(filenames_test);
     for (int i = 0; i < 6; i++) testtex[i] = render::CreateTexture2D(filenames_test[i]);
@@ -147,6 +152,7 @@ void main()
     sh::zero(grace_catedral_sh);
     sh::make(grace_catedral_sh, shc_grace_cathedral, 9 * 3);
 
+    // teapot
     glm::mat4 tm;
     tm = glm::scale(tm, glm::vec3(2, 2, 2));
 
@@ -180,7 +186,7 @@ void main()
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glDisable(GL_CULL_FACE);
             glEnable(GL_DEPTH_TEST);
-            //render::DrawLODTerrain(terrain.heightmap, terrain.m, camera.v(), camera.p);
+            terrain::DrawTess(terra.heightmap, terra.m, camera.v(), camera.p);
             render::RenderSkybox(imagecm, camera.v(), camera.p);
 
             teapot::Draw(tm, camera.v(), camera.p);
@@ -201,7 +207,7 @@ void main()
     }
 
     // cleanup
-    glDeleteTextures(1, &terrain.heightmap);
+    glDeleteTextures(1, &terra.heightmap);
     glDeleteTextures(1, &testcm);
     glDeleteTextures(1, &imagecm);
     glDeleteTextures(1, &cm);
