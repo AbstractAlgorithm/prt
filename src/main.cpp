@@ -4,6 +4,8 @@
 #include "SH.h"
 #include "Teapot.h"
 #include "Terrain.h"
+#include "Scene.h"
+#include "Cube.h"
 
 using namespace aa;
 
@@ -112,11 +114,19 @@ void TW_CALL genSH(void * /*clientData*/)
     render::FillCubemap(cm, cmRes, glm::vec3(0.0f, cm_height, 0.0f), &DrawWorld, &fillMySH);
 }
 
+scene::Scene sc;
+scene::Ray scray;
+scene::IntersectionPoint scip;
+void TW_CALL raytraceSceneF(void * /*clientData*/)
+{
+    scene::Intersect(sc, scray, scip);
+}
+
 void main()
 {
     // init
     glViewport(0, 0, hrect.right, hrect.bottom);
-    TwInit(TW_OPENGL, NULL);
+    TwInit(TW_OPENGL_CORE, NULL);
     glClearColor(54.0f / 255.0f, 122.0f / 255.0f, 165.0f / 255.0f, 1.0f);
     GetClientRect(window::g_hWnd, &hrect);
     wireframe = false;
@@ -139,6 +149,14 @@ void main()
     TwAddVarRW(uibar, "Radius", TW_TYPE_FLOAT, &camera.r, " min=0.01 max=1 step=0.01 ");
     TwAddVarRW(uibar, "Height", TW_TYPE_FLOAT, &cm_height, " min=0.0 max=3 step=0.005 ");
     TwAddButton(uibar, "Generate SH", genSH, NULL, " label='Generate SH' ");
+    TwAddSeparator(uibar, NULL, " group='Ray intersect' ");
+    TwAddVarRW(uibar, "r.o.x", TW_TYPE_FLOAT, &scray.o.x, " min=-2.0 max=2.0 step=0.005 ");
+    TwAddVarRW(uibar, "r.o.y", TW_TYPE_FLOAT, &scray.o.y, " min=-2.0 max=2.0 step=0.005 ");
+    TwAddVarRW(uibar, "r.o.z", TW_TYPE_FLOAT, &scray.o.z, " min=-2.0 max=2.0 step=0.005 ");
+    TwAddVarRW(uibar, "r.d.x", TW_TYPE_FLOAT, &scray.d.x, " min=-1.0 max=1.0 step=0.005 ");
+    TwAddVarRW(uibar, "r.d.y", TW_TYPE_FLOAT, &scray.d.y, " min=-1.0 max=1.0 step=0.005 ");
+    TwAddVarRW(uibar, "r.d.z", TW_TYPE_FLOAT, &scray.d.z, " min=-1.0 max=1.0 step=0.005 ");
+    TwAddButton(uibar, "Raytrace", raytraceSceneF, NULL, " label='Raytrace' ");
 
     // skyboxes
     imagecm = render::CreteTextureCubemap(filenames);
@@ -152,9 +170,22 @@ void main()
     sh::zero(grace_catedral_sh);
     sh::make(grace_catedral_sh, shc_grace_cathedral, 9 * 3);
 
-    // teapot
-    glm::mat4 tm;
-    tm = glm::scale(tm, glm::vec3(2, 2, 2));
+    // scene
+    scene::Mesh cube_mesh;
+    scene::MakeMesh(cube_mesh, cube::position, cube::normals, cube::numVertices, cube::indices, cube::numIndices);
+    
+    cube_mesh.m = glm::translate(cube_mesh.m, glm::vec3(-0.1f, 0.0f, 0.0f));
+    cube_mesh.m = glm::scale(cube_mesh.m, glm::vec3(0.05f));
+    sc.push_back(cube_mesh);
+
+    scene::Mesh teapot_mesh;
+    scene::MakeMesh(teapot_mesh, (float*)teapot::position, (float*)teapot::normal, teapot::numVertices, teapot::index, teapot::numIndices);
+    teapot_mesh.m = glm::translate(teapot_mesh.m, glm::vec3(0.1f, 0.0f, 0.0f));
+    sc.push_back(teapot_mesh);
+
+    scray.o = glm::vec3(0.0f, 0.0f, 0.5f);
+    scray.d = glm::vec3(0.0f, 1.0f, 0.0f);
+    raytraceSceneF(0);
 
     // loop
     while (!window::windowShouldClose())
@@ -175,7 +206,7 @@ void main()
 
         // drawing
         {
-            render::FillCubemap(cm, cmRes, glm::vec3(0.0f, cm_height, 0.0f), &DrawWorld);
+            //render::FillCubemap(cm, cmRes, glm::vec3(0.0f, cm_height, 0.0f), &DrawWorld);
 
             // render
             if (wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -187,14 +218,16 @@ void main()
             glDisable(GL_CULL_FACE);
             glEnable(GL_DEPTH_TEST);
             //terrain::DrawTess(terra.heightmap, terra.m, camera.v(), camera.p);
+            scene::DrawIntersectDebug(sc, camera.v(), camera.p, scip.p);
             render::RenderSkybox(cm, camera.v(), camera.p);
 
-            teapot::Draw(shc_my_scene, tm, camera.v(), camera.p);
+            //teapot::Draw(shc_my_scene, tm, camera.v(), camera.p);
+            
 
             //sh::DrawLatlong(grace_catedral_sh, glm::ivec2(80, 568), glm::uvec2(400, 200));
             
-            sh::DrawLatlong(shc_my_scene, glm::ivec2(480, 568), glm::uvec2(400, 200));
-            render::DrawCubemapAsLatlong(cm, 880, 568, 400, 200);
+            //sh::DrawLatlong(shc_my_scene, glm::ivec2(480, 568), glm::uvec2(400, 200));
+            //render::DrawCubemapAsLatlong(cm, 880, 568, 400, 200);
             //sh::DrawProbe(shc_my_scene, 0, 0, 200);
             //render::DrawCubemapProbe(imagecm, 680, 568,  200);
             //render::DrawCubemapAsLatlong(testcm, 0, 368, 400, 200);
