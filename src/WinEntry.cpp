@@ -5,7 +5,7 @@ using namespace aa;
 //--------------------------------------------------------------------------------------
 // Global Variables
 //--------------------------------------------------------------------------------------
-bool quit = false;
+bool window::quit = false;
 static HANDLE renderThreadHandle = NULL;
 
 //--------------------------------------------------------------------------------------
@@ -34,12 +34,12 @@ void input::Process()
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
-    if (msg.message == WM_QUIT) { ::quit = true; }
+    if (msg.message == WM_QUIT) { window::quit = true; }
 }
 
 bool window::windowShouldClose()
 {
-    return ::quit;
+    return window::quit;
 }
 
 //--------------------------------------------------------------------------------------

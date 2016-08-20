@@ -12,6 +12,7 @@ if (err != GL_NO_ERROR)    \
     printf("ERROR: 0x%x (%s)\n%s : %d\n", err, errmsg, __FILE__, __LINE__); \
 } while (0)
 
+
 namespace aa
 {
     namespace render
