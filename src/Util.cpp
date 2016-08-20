@@ -40,3 +40,61 @@ void util::drawQuad(GLuint pgm, int x, int y, int w, int h)
     glUseProgram(pgm);
     glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 }
+const char* util::Tex2DViz::fs =
+    "#version 330\n"
+    "in vec2 uv;\n"
+    "uniform sampler2D tex;\n"
+    "out vec4 fcolor;\n"
+    "void main()\n"
+    "{\n"
+    "    fcolor = texture(tex,uv);\n"
+    "}\n";
+util::Tex2DViz::Tex2DViz(Texture2D* tex)
+{
+    mat.pgm = util::setupQuadProgram(fs);
+    tex_uniform.loc = glGetUniformLocation(mat.pgm, "tex");
+    tex_uniform.tex = tex;
+}
+void util::Tex2DViz::draw(int x, int y, int w, int h)
+{
+    tex_uniform.bind();
+    util::drawQuad(mat.pgm, x, y, w, h);
+}
+
+const char* util::CubemapViz::fs =
+    "#version 330\n"
+    "in vec2 uv; \n"
+    "uniform samplerCube uTex;\n"
+    "out vec4 fragColor;\n"
+    "\n"
+    "vec3 vecFromLatLong(vec2 _uv)\n"
+    "{\n"
+    "    float pi = 3.14159265;\n"
+    "    float twoPi = 2.0*pi;\n"
+    "    float phi = _uv.x * twoPi;\n"
+    "    float theta = _uv.y * pi;\n"
+
+    "    vec3 result;\n"
+    "    result.x = -sin(theta)*sin(phi);\n"
+    "    result.y = -cos(theta);\n"
+    "    result.z = -sin(theta)*cos(phi);\n"
+
+    "    return result;\n"
+    "}\n"
+    "\n"
+    "void main()\n"
+    "{\n"
+    "    vec3 dir = vecFromLatLong(uv);\n"
+    "    fragColor = texture(uTex, dir);\n"
+    "}\n";
+util::CubemapViz::CubemapViz(Cubemap* tex)
+{
+    mat.pgm = util::setupQuadProgram(fs);
+    tex_uniform.loc = glGetUniformLocation(mat.pgm, "tex");
+    tex_uniform.tex = tex;
+}
+void util::CubemapViz::draw(int x, int y, int w, int h)
+{
+    tex_uniform.bind();
+    util::drawQuad(mat.pgm, x, y, w, h);
+}

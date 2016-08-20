@@ -250,41 +250,7 @@ using namespace aa::gfx;
 //    TwTerminate();
 //}
 
-const char* viz_tex2D_fs =
-    "#version 330\n"
-    "in vec2 uv;\n"
-    "uniform sampler2D tex;\n"
-    "out vec4 fcolor;\n"
-    "void main()\n"
-    "{\n"
-    "    fcolor = texture(tex,uv);\n"
-    "}\n";
-const char* viz_cubemap_fs =
-    "#version 330\n"
-    "in vec2 uv; \n"
-    "uniform samplerCube uTex;\n"
-    "out vec4 fragColor;\n"
-    "\n"
-    "vec3 vecFromLatLong(vec2 _uv)\n"
-    "{\n"
-    "    float pi = 3.14159265;\n"
-    "    float twoPi = 2.0*pi;\n"
-    "    float phi = _uv.x * twoPi;\n"
-    "    float theta = _uv.y * pi;\n"
 
-    "    vec3 result;\n"
-    "    result.x = -sin(theta)*sin(phi);\n"
-    "    result.y = -cos(theta);\n"
-    "    result.z = -sin(theta)*cos(phi);\n"
-
-    "    return result;\n"
-    "}\n"
-    "\n"
-    "void main()\n"
-    "{\n"
-    "    vec3 dir = vecFromLatLong(uv);\n"
-    "    fragColor = texture(uTex, dir);\n"
-    "}\n";
 const char* filenames[6] = {
     "src/images/right.bmp",
     "src/images/left.bmp",
@@ -300,13 +266,6 @@ const char* filenames_test[6] = {
     "src/images/posz.bmp",
     "src/images/negz.bmp" };
 const char img[16] = { 255, 255, 255, 255, 255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255 };
-struct
-{
-    Material tex2D;
-    tex2d_u texU;
-    Material cubemap;
-    texcm_u texcmU;
-} viz;
 
 
 void main()
@@ -327,14 +286,8 @@ void main()
     Cubemap okolina;
     okolina.bmp(filenames);
 
-    viz.tex2D.pgm = util::setupQuadProgram(viz_tex2D_fs);
-    viz.texU.loc = glGetUniformLocation(viz.tex2D.pgm, "tex");
-    viz.texU.tex = &slika2;
-
-    viz.cubemap.pgm = util::setupQuadProgram(viz_cubemap_fs);
-    viz.texcmU.loc = glGetUniformLocation(viz.tex2D.pgm, "uTex");
-    viz.texcmU.tex = &okolina;
-    viz.cubemap.log();
+    util::Tex2DViz viz2d(&slika2);
+    util::CubemapViz vizCM(&okolina);
 
     // loop
     while (!window::windowShouldClose())
@@ -345,10 +298,8 @@ void main()
     
         // drawing
         {
-            viz.texU.bind();
-            util::drawQuad(viz.tex2D.pgm, 500, 0, 500, 500);
-            viz.texcmU.bind();
-            util::drawQuad(viz.cubemap.pgm, 0, 0, 500, 250);
+            viz2d.draw(0,0,250,250);
+            vizCM.draw(250, 0, 500, 250);
             glViewport(0, 0, hrect.right, hrect.bottom);
             TwDraw();
         }
