@@ -8,8 +8,8 @@
 #include "Cube.h"
 
 #include "Material.h"
-#include "Texture2D.h"
-#include "Cubemap.h"
+#include "Textures.h"
+#include "RenderTarget .h"
 #include "Util.h"
 
 using namespace aa;
@@ -279,15 +279,24 @@ void main()
 
     Texture2D slika;
     slika.bmp("src/images/front.bmp");
-    Texture2D slika2;
-    slika2.bind();
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 2, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, img);
+    Texture2D testSlika(2,2);
+    testSlika.bind();
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, testSlika.width, testSlika.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img);
 
     Cubemap okolina;
     okolina.bmp(filenames);
 
-    util::Tex2DViz viz2d(&slika2);
+    util::Tex2DViz viz2d(&testSlika);
     util::CubemapViz vizCM(&okolina);
+
+    RT testRT(128, 128);
+    testRT.use();
+    glClearColor(1.0, 0.0, 0.0, 1.0);
+    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(0, 0, hrect.right, hrect.bottom);
+    glClearColor(54.0f / 255.0f, 122.0f / 255.0f, 165.0f / 255.0f, 1.0f);
 
     // loop
     while (!window::windowShouldClose())
@@ -298,9 +307,16 @@ void main()
     
         // drawing
         {
-            viz2d.draw(0,0,250,250);
-            vizCM.draw(250, 0, 500, 250);
-            glViewport(0, 0, hrect.right, hrect.bottom);
+            glClear(GL_COLOR_BUFFER_BIT);
+
+            vizCM.drawLatlong(250, 0, 500, 250);
+            vizCM.drawProbe(750, 0, 250);
+
+            viz2d.tex_uniform.tex = &testRT.color;
+//            viz2d.tex_uniform.tex = &testSlika;
+            viz2d.draw(0, 0, 250, 250);
+
+            AAGFXERRCHK(glViewport(0, 0, hrect.right, hrect.bottom));
             TwDraw();
         }
     

@@ -1,8 +1,7 @@
 #pragma once
 
 #include "WinEntry.h"
-#include "Texture2D.h"
-#include "Cubemap.h"
+#include "Textures.h"
 
 namespace aa
 {

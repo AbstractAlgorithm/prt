@@ -18,26 +18,23 @@ GLuint util::setupQuadProgram(const char* fragShdrSrc)
         "    uv = pos * vec2(0.5, -0.5) + 0.5;\n"
         "}\n";
 
-    GLuint vs = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vs, 1, &fsquadvs, NULL);
-    glCompileShader(vs);
+    VertexShader vs;
+    vs.src(fsquadvs);
 
-    GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fs, 1, &fragShdrSrc, NULL);
-    glCompileShader(fs);
+    FragmentShader fs;
+    fs.src(fragShdrSrc);
 
     GLuint pgm = glCreateProgram();
-    glAttachShader(pgm, vs);
-    glAttachShader(pgm, fs);
+    glAttachShader(pgm, vs.shdr);
+    glAttachShader(pgm, fs.shdr);
     glLinkProgram(pgm);
 
     return pgm;
 }
-void util::drawQuad(GLuint pgm, int x, int y, int w, int h)
+void util::drawQuad(int x, int y, int w, int h)
 {
     glViewport(x, y, w, h);
     glDisable(GL_CULL_FACE);
-    glUseProgram(pgm);
     glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 }
 const char* util::Tex2DViz::fs =
@@ -57,15 +54,15 @@ util::Tex2DViz::Tex2DViz(Texture2D* tex)
 }
 void util::Tex2DViz::draw(int x, int y, int w, int h)
 {
+    mat.use();
     tex_uniform.bind();
-    util::drawQuad(mat.pgm, x, y, w, h);
+    util::drawQuad(x, y, w, h);
 }
-
-const char* util::CubemapViz::fs =
+const char* util::CubemapViz::latlong_fs =
     "#version 330\n"
     "in vec2 uv; \n"
-    "uniform samplerCube uTex;\n"
-    "out vec4 fragColor;\n"
+    "uniform samplerCube tex;\n"
+    "out vec4 fcolor;\n"
     "\n"
     "vec3 vecFromLatLong(vec2 _uv)\n"
     "{\n"
@@ -85,16 +82,53 @@ const char* util::CubemapViz::fs =
     "void main()\n"
     "{\n"
     "    vec3 dir = vecFromLatLong(uv);\n"
-    "    fragColor = texture(uTex, dir);\n"
+    "    fcolor = texture(tex, dir);\n"
     "}\n";
+const char* util::CubemapViz::probe_fs =
+    "#version 330\n"
+    "in vec2 uv;\n"
+    "uniform samplerCube tex;\n"
+    "out vec4 fcolor;\n"
+    "void main()\n"
+    "{\n"
+    "    vec2 p = uv*2.0 - vec2(1.0); \n"
+    "    if (length(p) < 1.0)\n"
+    "    {\n"
+    "        float theta = acos(p.x);\n"
+    "        float phi = acos(p.y);\n"
+    "        float sr = sin(phi);\n"
+    "        vec3 n;\n"
+    "        n.x = p.x;\n"
+    "        n.y = p.y;\n"
+    "        n.z = sqrt(sr*sr - p.x*p.x);\n"
+    "        n = normalize(n);\n"
+    "        vec3 camera = vec3(0.0, 0.0, 30.0);\n"
+    "        vec3 ray = n - camera;\n"
+    "        vec3 rRay = reflect(ray, n);\n"
+    "        fcolor = texture(tex, rRay);\n"
+    "    }\n"
+    "    else\n"
+    "        discard;\n"
+    "}";
 util::CubemapViz::CubemapViz(Cubemap* tex)
 {
-    mat.pgm = util::setupQuadProgram(fs);
-    tex_uniform.loc = glGetUniformLocation(mat.pgm, "tex");
-    tex_uniform.tex = tex;
+    matLatlong.pgm = util::setupQuadProgram(latlong_fs);
+    texLatlong.loc = glGetUniformLocation(matLatlong.pgm, "tex");
+    texLatlong.tex = tex;
+    matProbe.pgm = util::setupQuadProgram(probe_fs);
+    matProbe.log();
+    texProbe.loc = glGetUniformLocation(matProbe.pgm, "tex");
+    texProbe.tex = tex;
 }
-void util::CubemapViz::draw(int x, int y, int w, int h)
+void util::CubemapViz::drawLatlong(int x, int y, int w, int h)
 {
-    tex_uniform.bind();
-    util::drawQuad(mat.pgm, x, y, w, h);
+    matLatlong.use();
+    texLatlong.bind();
+    util::drawQuad(x, y, w, h);
+}
+void util::CubemapViz::drawProbe(int x, int y, unsigned dim)
+{
+    matProbe.use();
+    texProbe.bind();
+    util::drawQuad(x, y, dim, dim);
 }
